@@ -1,5 +1,6 @@
-!- parser2.1
-!- doesn't work
+!- parser2.2
+!- 'decl var'
+!= 'var=expression'
    10 print "{clear}{down}{down}welcome to zparser"
    20 ss=100:dim vs$(ss),os$(ss),ps(ss)
    25 ps(0)=0
@@ -14,7 +15,7 @@
    54 data too many close parenthesis
    59 :
    60 read no:dim op$(no):for i=1 to no
-   62 read op$(no):next
+   62 read op$(i):next
    64 op$(1)=","
    66 data 11,,{arrow left},+,-,*,/,^,=,(,),]
    69 :
@@ -50,8 +51,18 @@
   240 print "  help - display this"
   250 print "  quit - end program"
   260 goto 100
-  300 gosub 10000
-  310 goto 100
+  290 :
+  300 if left$(f$,4)<>"decl" then 390
+  310 : for i=4 to len(f$)
+  320 :   if mid$(f$,i,1)<>" " then next
+  330 : if i>len(f$) then er=1:l=300:goto        30000
+  340 : vr$=mid$(f$,i+1,len(f$)-i-1)
+  350 : mk=1:gosub 20500
+  360 : print "variable '";vr$;"' created."
+  370 : goto 100
+  380 :
+  390 gosub 10000
+  400 goto 100
  9970 :
  9980 :
  9990 :
@@ -59,19 +70,20 @@
  10010 rem get var to rcve val
  10020 c$=mid$(f$,ptr,1)
  10030 if c$<"a" or c$>"z" then er=8:l=30:goto 30000
- 10040 gosub 20460:part=2
+ 10040 gosub 20200:if er<>0 then 30000
+ 10045 part=2
  10050 :
  10060 rem get next char
  10070 ptr=ptr+1
  10080 c$=mid$(f$,ptr,1)
- 10085 if c$=chr$(13) then op$="{arrow left}":             gosub 21000:return
+ 10085 if c$="{arrow left}" then op$=c$:                   gosub 21000:return
  10090 if c$<"0" or c$>"9" then 10130
  10100 : if part=1 then part=2:goto 20000        :rem # expected
  10110 : if part=2 then op$="*":gosub 21000      :goto 20000:rem implied *
  10120 :
  10130 if c$<"a" or c$>"z" then 10170
- 10140 : if part=1 then part=2:goto 20200        :rem var expctd
- 10150 : if part=2 then op$="*":gosub 21000      :goto 20200:rem implied *
+ 10140 : if part=1 then part=2:gosub 20200       :goto 10060:rem var expctd
+ 10150 : if part=2 then op$="*":gosub 21000 :gosub 20200:goto 10060:rem implied *
  10160 :
  10170 if c$<>"+" and c$<>"*" and c$<>"/"       and c$<>"^" then 10210
  10180 : if part=1 then er=1:l=180:goto 30000    :rem var needed first
@@ -115,7 +127,7 @@
  19980 :
  19990 :
  20000 rem extract constant
- 20010 xt$=c$:pd=0:ee=0
+ 20010 vr$=c$:pd=0:ee=0
  20020 ptr=ptr+1:c$=mid$(f$,ptr,1)
  20030 if c$>="0" and c$<="9" then              vr$=vr$+c$:goto 20020
  20040 if c$<>"." then 20070
@@ -124,34 +136,35 @@
  20070 if c$<>"e" then 20100
  20080 : if ee=1 then 20100
  20090 : ee=1:vr$=vr$+c$:goto 20020
- 20100 goto 10060
+ 20100 ptr=ptr-1:goto 10060
  20110 :
  20120 :
  20200 rem extract variable
- 20205 :
- 20210 xt$=c$:ep=ptr
- 20220 ptr=ptr+1:c$=mid$(f$,ptr,1)
- 20230 for i=1 to no:if c$=op$(i) then           20300
- 20240 next
- 20250 if c$="[" then 20400:rem if any other ops req spcl atn, put them here
- 20252 rem i.e. '[' means array
- 20260 xt$=xt$+c$:goto 20220
- 20270 :
- 20300 : for i=1 to nv
- 20310 :   if xt$<>va$(i) then next:goto            20490
- 20320 typ$="scalar"
- 20330 er=0:return
- 20340 :
+ 20210 :
+ 20220 vr$=c$:ep=ptr
+ 20230 ptr=ptr+1:c$=mid$(f$,ptr,1)
+ 20240 for i=1 to no:if c$=op$(i) then           20300
+ 20250 next
+ 20260 if c$="[" then 20400:rem if any other ops req spcl atn, put them here
+ 20270 rem i.e. '[' means array
+ 20280 vr$=vr$+c$:goto 20230
+ 20290 :
+ 20300 ptr=ptr-1
+ 20310 for i=1 to nv
+ 20320 : if vr$<>va$(i) then next:goto            20490
+ 20330 typ$="scalar"
+ 20340 er=0:return
+ 20350 :
  20400 rem
  20410 : for i=1 to nf
- 20420 :   if xt$<>fc$(i) then next:goto 20460
+ 20420 :   if vr$<>fc$(i) then next:goto 20460
  20430 : typ$="function"
  20440 : return
  20450 : for i=1 to nv
- 20460 :   if xt$<>va$(i) then next:goto 20490
+ 20460 :   if vr$<>va$(i) then next:goto 20490
  20470 : typ$="array"
  20480 : return
- 20490 er=11:return:rem undef'd var
+ 20490 er=11:l=20200:return:rem undef'd var
  20498 :
  20499 :
  20500 rem val$/var$->val#
@@ -180,7 +193,7 @@
  21080 tp$=op$:tr=op
  21090 mk=0:gosub 20500:v2=vr:t=vr:             rem get val
  21100 gosub 22000:if op$<>"=" then 21115
- 21106 : mk=1:gosub 20500
+ 21106 : mk=0:gosub 20500
  21109 : vv(vp)=t
  21111 printva$(vp)"="vv(vp)
  21112 : goto 21190
@@ -213,7 +226,7 @@
  29980 :
  29990 :
  30000 if er<1 or er>ne then print"bad error # you fool!! ("er")":goto 100
- 30010 print " {left}"tab(ep-1);"^"
+ 30010 print " {left}"tab(ptr-1);"^"
  30020 print er$(er);" error in"l
  30030 goto 100
  30040 :
