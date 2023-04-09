@@ -47,7 +47,8 @@
     <BuildList>
         <FileName>README.txt</FileName>
         <FileName>rekanizer.bas</FileName>
-        <FileName>parser.bas</FileName>
+        <FileName>parsec.bas</FileName>
+        <FileName>parsec.txt</FileName>
     </BuildList>
     <DetermineBuildOrder>0</DetermineBuildOrder>
     <PaddingByte>0</PaddingByte>
@@ -58,9 +59,20 @@
     <!--End of screen designer settings-->
     <SourceFiles>
         <SourceFile>
-            <Name>parser.bas</Name>
+            <Name>parsec.bas</Name>
             <PrgName />
             <FileType>1</FileType>
+            <IncludeInBuild>True</IncludeInBuild>
+            <Regions />
+            <Breakpoints />
+            <Bookmarks />
+            <Topmost>False</Topmost>
+            <FileOpen>True</FileOpen>
+        </SourceFile>
+        <SourceFile>
+            <Name>parsec.txt</Name>
+            <PrgName />
+            <FileType>5</FileType>
             <IncludeInBuild>True</IncludeInBuild>
             <Regions />
             <Breakpoints />

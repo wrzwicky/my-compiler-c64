@@ -1,0 +1,45 @@
+ ZParser Compiler (PARSEC) program info
+    by William R. Zwicky    7 Sep 90
+----------------------------------------
+
+STRUCT Stack[]  <     For expression evaluation
+  Var$,        VS$()   A Token
+  Operator$,   OS$()   An operator
+  Priority,    PS()    Current priority of operator
+  Type$        TS$()   Var type (int, float, etc.)
+  >
+
+I1     NumWords  NW   Number of words known
+STRUCT Word[]  <      Keeps track of all words known by Parsec
+  $,           W$()    The word itself
+  Bank,        B()     What bank it's in
+  ItemNum      N()     It's item number within the bank
+  >
+
+I1     NumBanks  NB   Number of banks used
+STRUCT Bank[]  <      Keeps track of the banks the words are in
+  Type$,       BT$()   The type (name) of the bank (ie. I2)
+  NumIn        NN()    Number of items in bank
+  >
+
+---Other possible vars:---
+PL  executable program line
+ES  executable's stack
+DO  disk output flag
+PO  printer output flag
+
+
+-------------------------------------
+
+RAM allocation for variables
+  Compiler:
+    Does nothing!!
+    Each word is referenced in .OBJ file as a token [Bank, Word]
+  Linker:
+    generate base ads for each bank
+    generate offsets for each word
+      -needs a current location pointer for each bank
+      Word[latest]:Location _ Pointer
+      Pointer _+ SizeOf[Word]
+
+SYS 65487 is CHRIN
