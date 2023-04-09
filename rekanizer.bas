@@ -1,3 +1,6 @@
+    0 rem rekanizer7
+    1 rem wrz 7-11-90
+    9 :
    10 dim w$(50),b(50),n(50),bt$(50),nn(50):   rem word,bank,item#;btype,#items/b
    20 nw=0:rem # words
    30 gosub1000
@@ -22,12 +25,14 @@
   250 cl=cl+1:tp(cl)=ll
   260 if k$=chr$(13) then 100
   270 goto 120:rem k$=anything else
-  280 if k$<" " or k$>"@" then 310
+  280 if k$<" " or k$>"@" then 310:rem       possible chars for ops
   290 w$=k$:gosub 2000
-  300 if d%=0 then if bt$(b(wl%))="op" then goto 210:rem k$="op"->new word
+  300 if d%=0 then if bt$(b(wl%))="op" then 400:rem k$="op"->new word
   310 if k$="{f1}" then gosub 5000:goto 100
   320 if k$="{ct c}" then 100
-  330 if k$="{sh space}" then print:gosub 2500:l=len(a$):goto 220:rem if k$=sft-spc
+  330 if k$<>"{sh space}" then 340:rem sft-spc
+  332 print:input "type of item";ty$:gosub 2300
+  334 w$=a$:gosub 2500:l=len(a$):goto 220
   340 if k$<" " or k$>"{arrow left}" then 140:            rem asc 32-95 allowed
   350 printk$;:a$=a$+k$
   360 e=l-len(a$):if e>0 then print left$(sp$,e);
@@ -104,7 +109,11 @@
  4020 poke 54276,17:poke53280,14:return
  4099 :
  5000 sp$="          ":print:print"{reverse on} words: "
- 5010 for p=1 to nw step 2
+ 5005 w2=int(nw/2+.5)
+ 5010 for p=1 to w2
  5020 print w$(p);tab(10)bt$(b(p));
- 5030 print tab(20)w$(p+1);tab(30)bt$(b(p+1))
- 5040 next:return
+ 5030 if p+w2<=nw then print tab(20)w$(p+w2);tab(30)bt$(b(p+w2));
+ 5040 print:next
+ 5050 print"{reverse on}press a key"
+ 5060 get a$:if a$="" then 5060
+ 5070 return
