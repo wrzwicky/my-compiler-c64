@@ -1,9 +1,9 @@
-!- parsec.1.0
-!- doesn't work
+!- parsec.1.1
+!- doesn't work, = not implemented at 10530
    10 print "{clear}{down}{down}welcome to zparser compiler"
    20 ss=100:dim vs$(ss),os$(ss),ps(ss),       nt$(ss)
    25 ps(0)=0
-   30 dim va$(100),vv(100),vt$(100)
+   30 dim va$(100),vt$(100)
    32 dim an$(20),ad(20),av(20,20),at(20):     rem values=av(var #,subscript #)
    39 :
    40 read ne:dim er$(ne):for i=1 to ne
@@ -35,7 +35,7 @@
   155 : if nv=0 then print"no vars!":goto 190
   157 print"* scalars:"
   160 : for i=1 to nv
-  170 :   print va$(i);tab(20);vv(i)
+  170 :   print va$(i);tab(20);vt$(i)
   180 :   next
   190 : if na=0 then print "no arrays!":goto 100
   191 : print "* arrays:"
@@ -76,7 +76,8 @@
   490 : if na=0 then 520
   500 :   for i=1 to na
   510 :     gosub 23000:print "rem declare ";        an$(i);" i2 ["ad(i)"]":next
-  520 : gosub 23000:print"dim stack(100)"
+  520 : gosub 23000:print "rem declare t i2"
+  525 : gosub 23000:print"dim stack(100)"
   530 : goto 100
   540 :
   550 :
@@ -124,7 +125,7 @@
  10470 rem process ','
  10510 :
  10520 rem what's this char?
- 10530 er=3:l=530:gosub 30000:return
+ 10530 er=3:l=10530:gosub 30000:return
  10540 :
  19980 :
  19990 :
@@ -155,7 +156,7 @@
  20290 :
  20300 ptr=ptr-1
  20310 pe=0:mk=0:gosub 20500:pe=1
- 20320 if er=0 then vr$=str$(vr)+"+":           return
+ 20320 if er=0 then vr$=str$(vr)+"Z":           nt$=vt$(vr):return
  20350 :
  20400 rem
  20410 : for i=1 to nf
@@ -180,6 +181,7 @@
  20620 :
  20630 :
  21000 rem push var,op,priority
+ 21005 v2$=vr$:n2$=nt$
  21010 op=5    :rem if op$ is a func
  21020 if op$="{arrow left}" then op=0
  21030 if op$="=" then op=1
@@ -188,23 +190,25 @@
  21060 if op$="^" then op=4
  21065 op=op+pr
  21070 if op>ps(sp-1) then pv$=vr$:             goto 21210
- 21080 tp$=op$:tr=op:pv$="*"
- 21090 v2$=vr$:n2$=nt$
+ 21080 tp$=op$:tr=op
+ 21090 rem
  21100 gosub 22000:v1$=vr$:n1$=nt$
+ 21110 if v1$="t+" then v1$="pullZ"
  21120 if op$="+" then 41000
  21130 if op$="-" then 42000
  21140 if op$="*" then 43000
  21150 if op$="/" then 44000
  21160 if op$="^" then 45000
- 21170 l=21170:er=3:gosub 30000:return
- 21190 if sp=0 then 21200
+ 21170 l=21170:er=3:gosub 30000:stop
+ 21180 v2$="t"
+ 21190 if sp=1 then 21200
  21195 if tr<=ps(sp-1) then 21100
  21200 op$=tp$:op=tr:vr$="*"
- 21210 if vs$(sp-1)="*" then gosub 23000:       print "push t"
- 21215 vs$(sp)=vr$
+ 21210 if vs$(sp-1)="t" then gosub 23000:       print "push t":vs$(sp-1)="t+"
+ 21215 vs$(sp)=v2$
  21220 os$(sp)=op$
  21230 ps(sp)=op
- 21235 vt$(sp)="i2"
+ 21235 vt$(sp)=n2$
  21240 sp=sp+1
  21250 if sp>ss then er=10:l=21250:gosub        30000:return
  21260 return
@@ -213,7 +217,7 @@
  22010 sp=sp-1
  22020 vr$=vs$(sp)
  22030 op$=os$(sp)
- 22040 py =pr(sp)
+ 22040 op =pr(sp)
  22045 nt$=vt$(sp)
  22050 return
  22060 :
@@ -235,21 +239,26 @@
  30060 :
  31000 for i=1 to 10
  31010 printvs$(i),os$(i),ps(i):next:end
- 41000 gosub 23000:print "t=v1+v2"
- 41010 return
+ 41000 gosub23000:print"t=";v1$;"+";v2$;
+ 41010 print tab(20);n1$;tab(30);n2$
+ 41900 goto 21180
  41998 :
  41999 :
- 42000 gosub 23000:print "t=v1-v2"
- 42010 return
+ 42000 gosub23000:print"t=";v1$;"-";v2$;
+ 42010 print tab(20);n1$;tab(30);n2$
+ 42900 goto 21180
  42998 :
  42999 :
- 43000 gosub 23000:print "t=v1*v2"
- 43010 return
+ 43000 gosub23000:print"t=";v1$;"*";v2$;
+ 43010 print tab(20);n1$;tab(30);n2$
+ 43900 goto 21180
  43998 :
  43999 :
- 44000 gosub 23000:print "t=v1/v2"
- 44010 return
+ 44000 gosub23000:print"t=";v1$;"/";v2$;
+ 44010 print tab(20);n1$;tab(30);n2$
+ 44900 goto 21180
  44998 :
  44999 :
- 45000 gosub 23000:print "t=v1^v2"
- 45010 return
+ 45000 gosub23000:print"t=";v1$;"^";v2$;
+ 45010 print tab(20);n1$;tab(30);n2$
+ 45900 goto 21180
