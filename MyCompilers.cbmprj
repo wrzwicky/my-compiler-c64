@@ -14,7 +14,7 @@
     <d64Name />
     <Comments>CBM prg Studio update of my compilers</Comments>
     <Author>William R. Zwicky</Author>
-    <Email />
+    <Email>wrzwicky@pobox.com</Email>
     <AutoLaunchName>mycompilers.prg</AutoLaunchName>
     <NoSingleFileBuild>False</NoSingleFileBuild>
     <CreatedWithVersion>CBM prg Studio 4.0.1</CreatedWithVersion>
@@ -75,7 +75,7 @@
             <Regions />
             <Breakpoints />
             <Bookmarks />
-            <Topmost>False</Topmost>
+            <Topmost>True</Topmost>
             <FileOpen>True</FileOpen>
         </SourceFile>
     </SourceFiles>
