@@ -1,31 +1,57 @@
-!- parser.3
+!- parser2.1
+!- doesn't work
    10 print "{clear}{down}{down}welcome to zparser"
    20 ss=100:dim vs$(ss),os$(ss),ps(ss)
    25 ps(0)=0
    30 dim va$(100),vv(100)
+   32 dim an$(20),ad(20),av(20,20):rem         values=av(array #,subscript #)
+   39 :
    40 read ne:dim er$(ne):for i=1 to ne
    50 read er$(i):next
    51 data 12,missing var,early end of line,syntax,too many '='
    52 data illegal self operator,equation left of '=',illegal op this side of '='
    53 data illegal variable name,divide by 0,stack overflow,undefined variable
    54 data too many close parenthesis
+   59 :
+   60 read no:dim op$(no):for i=1 to no
+   62 read op$(no):next
+   64 op$(1)=","
+   66 data 11,,{arrow left},+,-,*,/,^,=,(,),]
+   69 :
+   70 read nf:for i=1 to nf
+   72 read fc$(i):next
+   74 data 5,sin,cos,tan,atn,exp
    90 :
    95 print "{down}ready for formulae."
   100 print "{down}ok."
   110 f$=""
-  120 sys 65487:f$=f$+chr$(peek(780))
-  130 if peek(780)<>13 then 120
-  135 if f$=" "+chr$(13) then print:goto 110
+  120 sys 65487:if peek(780)=13 then 135
+  130 f$=f$+chr$(peek(780)):goto 120
+  135 if f$=" " then print:goto 110
+  137 f$=f$+"{arrow left}"
   140 print:print ":{left}";
   150 if left$(f$,4)<>"dump" then 200
   155 : if nv=0 then print"no vars!":goto 190
+  157 print"* scalars:"
   160 : for i=1 to nv
   170 :   print va$(i);tab(20);vv(i)
   180 :   next
-  190 : goto 100
+  190 : if na=0 then print "no arrays!":goto 100
+  191 : print "* arrays:"
+  192 : for i=1 to na
+  193 : printan$(i)":":for j=1 to ad(i)
+  194 :   print j":"av(i,j):next
+  195 : next
+  196 : goto 100
   200 if left$(f$,4)="quit" then end
-  210 gosub 10000
-  220 goto 100
+  210 if left$(f$,4)<>"help" then 300
+  220 print "available commands:"
+  230 print "  dump - list all variables"
+  240 print "  help - display this"
+  250 print "  quit - end program"
+  260 goto 100
+  300 gosub 10000
+  310 goto 100
  9970 :
  9980 :
  9990 :
@@ -33,7 +59,7 @@
  10010 rem get var to rcve val
  10020 c$=mid$(f$,ptr,1)
  10030 if c$<"a" or c$>"z" then er=8:l=30:goto 30000
- 10040 gosub 20300:part=2
+ 10040 gosub 20460:part=2
  10050 :
  10060 rem get next char
  10070 ptr=ptr+1
@@ -88,32 +114,46 @@
  10540 :
  19980 :
  19990 :
- 20000 rem extract #
- 20010 vr$=c$:pd=0:e=0
+ 20000 rem extract constant
+ 20010 xt$=c$:pd=0:ee=0
  20020 ptr=ptr+1:c$=mid$(f$,ptr,1)
  20030 if c$>="0" and c$<="9" then              vr$=vr$+c$:goto 20020
  20040 if c$<>"." then 20070
  20050 : if pd=1 then 20100
  20060 : pd=1:vr$=vr$+c$:goto 20020
  20070 if c$<>"e" then 20100
- 20080 : if e=1 then 20100
- 20090 : e =1:vr$=vr$+c$:goto 20020
- 20100 ptr=ptr-1:goto 10060
+ 20080 : if ee=1 then 20100
+ 20090 : ee=1:vr$=vr$+c$:goto 20020
+ 20100 goto 10060
  20110 :
  20120 :
  20200 rem extract variable
- 20210 gosub 20300
- 20220 goto 10060
- 20230 :
- 20300 vr$=c$
- 20310 ptr=ptr+1:c$=mid$(f$,ptr,1)
- 20320 if c$="+" or c$="-" or c$="*" or c$="/" or c$="," then 20350
- 20330 if c$="^" or c$="=" or c$="(" or c$=")" or c$=chr$(13) then 20350
- 20340 vr$=vr$+c$:goto 20310
- 20350 ptr=ptr-1:return
- 20360 :
- 20370 :
- 20380 :
+ 20205 :
+ 20210 xt$=c$:ep=ptr
+ 20220 ptr=ptr+1:c$=mid$(f$,ptr,1)
+ 20230 for i=1 to no:if c$=op$(i) then           20300
+ 20240 next
+ 20250 if c$="[" then 20400:rem if any other ops req spcl atn, put them here
+ 20252 rem i.e. '[' means array
+ 20260 xt$=xt$+c$:goto 20220
+ 20270 :
+ 20300 : for i=1 to nv
+ 20310 :   if xt$<>va$(i) then next:goto            20490
+ 20320 typ$="scalar"
+ 20330 er=0:return
+ 20340 :
+ 20400 rem
+ 20410 : for i=1 to nf
+ 20420 :   if xt$<>fc$(i) then next:goto 20460
+ 20430 : typ$="function"
+ 20440 : return
+ 20450 : for i=1 to nv
+ 20460 :   if xt$<>va$(i) then next:goto 20490
+ 20470 : typ$="array"
+ 20480 : return
+ 20490 er=11:return:rem undef'd var
+ 20498 :
+ 20499 :
  20500 rem val$/var$->val#
  20510 if left$(vr$,1)<"a" or left$(vr$,1)>"z" then vr=val(vr$):return
  20520 if nv=0 then vp=1:goto 20560
@@ -173,7 +213,7 @@
  29980 :
  29990 :
  30000 if er<1 or er>ne then print"bad error # you fool!! ("er")":goto 100
- 30010 print " {left}"tab(ptr-1);"^"
+ 30010 print " {left}"tab(ep-1);"^"
  30020 print er$(er);" error in"l
  30030 goto 100
  30040 :
