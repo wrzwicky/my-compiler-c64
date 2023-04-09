@@ -1,6 +1,7 @@
-!- parser2.2
+!- parser2.3
 !- 'decl var'
-!= 'var=expression'
+!- 'var=expression'
+!- no array support
    10 print "{clear}{down}{down}welcome to zparser"
    20 ss=100:dim vs$(ss),os$(ss),ps(ss)
    25 ps(0)=0
@@ -17,7 +18,7 @@
    60 read no:dim op$(no):for i=1 to no
    62 read op$(i):next
    64 op$(1)=","
-   66 data 11,,{arrow left},+,-,*,/,^,=,(,),]
+   66 data 12,,{arrow left},+,-,*,/,^,=,(,),[,]
    69 :
    70 read nf:for i=1 to nf
    72 read fc$(i):next
@@ -47,10 +48,11 @@
   200 if left$(f$,4)="quit" then end
   210 if left$(f$,4)<>"help" then 300
   220 print "available commands:"
-  230 print "  dump - list all variables"
-  240 print "  help - display this"
-  250 print "  quit - end program"
-  260 goto 100
+  230 print "  decl - declare a variable"
+  240 print "  dump - list all variables"
+  250 print "  help - display this"
+  260 print "  quit - end program"
+  270 goto 100
   290 :
   300 if left$(f$,4)<>"decl" then 390
   310 : for i=4 to len(f$)
@@ -157,7 +159,7 @@
  20350 :
  20400 rem
  20410 : for i=1 to nf
- 20420 :   if vr$<>fc$(i) then next:goto 20460
+ 20420 :   if vr$<>fc$(i) then next:goto 20450
  20430 : typ$="function"
  20440 : return
  20450 : for i=1 to nv
