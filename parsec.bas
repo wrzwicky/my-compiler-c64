@@ -1,17 +1,18 @@
-!- parsec.1.1
-!- doesn't work, = not implemented at 10530
-   10 print "{clear}{down}{down}welcome to zparser compiler"
-   20 ss=100:dim vs$(ss),os$(ss),ps(ss),       nt$(ss)
+!- parsec.1.2
+!- doesn't work, = not implemented at 10380
+   10 print "{white}{clear}{down}{down}welcome to zparser compiler"
+   15 open 8,3
+   20 ss=100:dim vs$(ss),os$(ss),ps(ss),       ts$(ss)
    25 ps(0)=0
    30 dim va$(100),vt$(100)
    32 dim an$(20),ad(20),av(20,20),at(20):     rem values=av(var #,subscript #)
    39 :
    40 read ne:dim er$(ne):for i=1 to ne
    50 read er$(i):next
-   51 data 12,missing var,early end of line,syntax,too many '='
+   51 data 13,missing var,early end of line,syntax,too many '='
    52 data illegal self operator,equation left of '=',illegal op this side of '='
    53 data illegal variable name,divide by 0,stack overflow,undefined variable
-   54 data too many close parenthesis
+   54 data too many close parenthesis,unknown var type
    59 :
    60 read no:dim op$(no):for i=1 to no
    62 read op$(i):next
@@ -44,7 +45,7 @@
   194 :   print j":"av(i,j):next
   195 : next
   196 : goto 100
-  200 if left$(f$,4)="quit" then end
+  200 if left$(f$,4)="quit" then close 8:end
   210 if left$(f$,4)<>"help" then 300
   220 print "available commands:"
   230 print "  decl - declare a variable"
@@ -55,12 +56,16 @@
   270 goto 100
   290 :
   300 if left$(f$,4)<>"decl" then 390
-  310 : for i=4 to len(f$)
-  320 :   if mid$(f$,i,1)<>" " then next
-  330 : if i>len(f$) then er=1:l=300:ptr=i       :gosub 30000:goto 100
-  340 : vr$=mid$(f$,i+1,len(f$)-i-1):            nt$="i2"
+  305 : l=len(f$)
+  310 : for p1=4 to l
+  320 :   if mid$(f$,p1,1)<>" " then next
+  330 : if p1>l then er=1:l=330:ptr=5            :gosub 30000:goto 100
+  332 : for p2=p1+1 to l
+  334 :   if mid$(f$,p2,1)<>" " then next
+  336 : if p2>l then er=13:l=336:ptr=p2          :gosub 30000:goto 100
+  340 : vr$=mid$(f$,p1+1,p2-p1-1):              nt$=mid$(f$,p2+1,l-p2-1)
   350 : mk=1:gosub 20500
-  360 : print "variable '";vr$;"' created."
+  360 : print "variable '";vr$;"' created as ";nt$
   370 : goto 100
   380 :
   390 if left$(f$,4)<>"file" then 900
@@ -68,25 +73,19 @@
   410 :   if mid$(f$,i,1)<>" " then next
   420 : if i>len(f$) then er=1:l=420:ptr=i       :gosub 30000:goto 100
   430 : n$=mid$(f$,i+1,len(f$)-i-1)
-  440 : print "open 1,8,2,"chr$(34);n$",p,w"chr$(34)
+  435 : rem close 8
+  440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34)
   450 : pl=0
-  460 : if nv=0 then 490
-  470 :   for i=1 to nv
-  480 :     gosub 23000:print "rem declare ";        va$(i);" i2":next
-  490 : if na=0 then 520
-  500 :   for i=1 to na
-  510 :     gosub 23000:print "rem declare ";        an$(i);" i2 ["ad(i)"]":next
-  520 : gosub 23000:print "rem declare t i2"
-  525 : gosub 23000:print"dim stack(100)"
-  530 : goto 100
-  540 :
-  550 :
+  460 : gosub 23000:print#8,"dim var(100)"
+  470 : goto 100
+  898 :
+  899 :
   900 gosub 10000
   910 goto 100
  9970 :
  9980 :
  9990 :
- 10000 ptr=0:part=1:sp=1:er=0:pe=1
+ 10000 ptr=0:part=1:sp=1:er=0:pe=1             :es=nv+1
  10050 :
  10060 rem get next char
  10070 ptr=ptr+1
@@ -125,7 +124,7 @@
  10470 rem process ','
  10510 :
  10520 rem what's this char?
- 10530 er=3:l=10530:gosub 30000:return
+ 10530 er=3:l=530:gosub 30000:return
  10540 :
  19980 :
  19990 :
@@ -146,7 +145,7 @@
  20140 :
  20200 rem extract variable
  20210 :
- 20220 vr$=c$:ep=ptr
+ 20220 vr$=c$
  20230 ptr=ptr+1:c$=mid$(f$,ptr,1)
  20240 for i=1 to no:if c$=op$(i) then           20300
  20250 next
@@ -156,7 +155,7 @@
  20290 :
  20300 ptr=ptr-1
  20310 pe=0:mk=0:gosub 20500:pe=1
- 20320 if er=0 then vr$=str$(vr)+"Z":           nt$=vt$(vr):return
+ 20320 if er=0 then vr$="var("+str$(vr)+")"    :nt$=vt$(vr):return
  20350 :
  20400 rem
  20410 : for i=1 to nf
@@ -193,22 +192,24 @@
  21080 tp$=op$:tr=op
  21090 rem
  21100 gosub 22000:v1$=vr$:n1$=nt$
- 21110 if v1$="t+" then v1$="pullZ"
+ 21110 if v1$="t+" then es=es-1:v1$="var("+str$(es)+")"
  21120 if op$="+" then 41000
  21130 if op$="-" then 42000
  21140 if op$="*" then 43000
  21150 if op$="/" then 44000
  21160 if op$="^" then 45000
- 21170 l=21170:er=3:gosub 30000:stop
+ 21170 l=21170:er=3:gosub 30000:return
  21180 v2$="t"
  21190 if sp=1 then 21200
  21195 if tr<=ps(sp-1) then 21100
- 21200 op$=tp$:op=tr:vr$="*"
- 21210 if vs$(sp-1)="t" then gosub 23000:       print "push t":vs$(sp-1)="t+"
- 21215 vs$(sp)=v2$
- 21220 os$(sp)=op$
+ 21200 op$=tp$:op=tr
+ 21210 if vs$(sp-1)<>"t" then 21220
+ 21212 vs$(sp-1)="t+"
+ 21214 gosub 23000:print#8,"var(";str$(es);")=t":es=es+1
+ 21220 vs$(sp)=v2$
+ 21225 os$(sp)=op$
  21230 ps(sp)=op
- 21235 vt$(sp)=n2$
+ 21235 ts$(sp)=n2$
  21240 sp=sp+1
  21250 if sp>ss then er=10:l=21250:gosub        30000:return
  21260 return
@@ -218,13 +219,13 @@
  22020 vr$=vs$(sp)
  22030 op$=os$(sp)
  22040 op =pr(sp)
- 22045 nt$=vt$(sp)
+ 22045 nt$=ts$(sp)
  22050 return
  22060 :
  22070 :
  23000 rem generate next line number
  23010 pl=pl+10
- 23020 print pl;
+ 23020 print#8,pl;
  23030 return
  23040 :
  23050 :
@@ -239,26 +240,26 @@
  30060 :
  31000 for i=1 to 10
  31010 printvs$(i),os$(i),ps(i):next:end
- 41000 gosub23000:print"t=";v1$;"+";v2$;
+ 41000 gosub23000:print#8,"t=";v1$;"+";v2$;
  41010 print tab(20);n1$;tab(30);n2$
  41900 goto 21180
  41998 :
  41999 :
- 42000 gosub23000:print"t=";v1$;"-";v2$;
+ 42000 gosub23000:print#8,"t=";v1$;"-";v2$;
  42010 print tab(20);n1$;tab(30);n2$
  42900 goto 21180
  42998 :
  42999 :
- 43000 gosub23000:print"t=";v1$;"*";v2$;
+ 43000 gosub23000:print#8,"t=";v1$;"*";v2$;
  43010 print tab(20);n1$;tab(30);n2$
  43900 goto 21180
  43998 :
  43999 :
- 44000 gosub23000:print"t=";v1$;"/";v2$;
+ 44000 gosub23000:print#8,"t=";v1$;"/";v2$;
  44010 print tab(20);n1$;tab(30);n2$
  44900 goto 21180
  44998 :
  44999 :
- 45000 gosub23000:print"t=";v1$;"^";v2$;
+ 45000 gosub23000:print#8,"t=";v1$;"^";v2$;
  45010 print tab(20);n1$;tab(30);n2$
  45900 goto 21180
