@@ -1,4 +1,4 @@
-!- compiler.5
+!- compiler.6
    10 print"{down}piler.com{down}"
    20 dim w$(10),ml$(10),pt$(10)
    30 nw=0
@@ -147,12 +147,12 @@
  50000 f$="linktest":input "file to link (must end in '.obj') [linktest.obj]";f$
  50010 if right$(f$,4) <> ".obj" then i$=f$+".obj": else i$=f$:                       f$=left$(i$,len(i$)-4)
  50020 o$=f$+".ml":print "executable name [";o$;"]";:input o$
- 50025 print "- in ";i$;" and out ";o$
+ 50025 print "- in ";i$;" and out ";o$ : print
  50030 :
  50040 rem --- general inits ---
  50050 z$=chr$(0)
- 50060 dim sv(100) : rem symbol values
- 50070 dim st$(63),sa(63),ss(63) : rem segment titles, addresses, sizes
+ 50060 dim ss(100), sv(100) : rem symbol segments, symbol values
+ 50070 dim gt$(63),ga(63),gp(63) : rem segment titles, addresses, pointers
  50080 :
  50090 :
  50100 :
@@ -163,44 +163,39 @@
  50150 rem --- pass 1 inits ---
  50160 ps = 1 : rem pass #
  50170 :
- 50180 get#2,c$:h=asc(c$+z$) :s2=st : rem chunk header
- 50190 if (h and 192) = 0   then gosub 51000 : rem just data
- 50200 if (h and 192) = 64  then gosub 52000 : rem seg title
- 50210 if (h and 192) = 128 then gosub 53000 : rem error!
- 50215 goto 50260
+ 50180 get#2,c$ :h=asc(c$+z$) :s2=st :rem chunk header
+ 50190 if (h and 192) = 0   then gosub 51000 : goto 50260 : rem fetch data
+ 50200 if (h and 192) = 64  then gosub 52000 : goto 50260 : rem set segment
+ 50210 if (h and 192) = 128 then gosub 53000 : goto 50260 : rem unused
  50220 :
  50230 rem --- command handler ---
  50240 h = h and 63
- 50250 on h gosub 54000,54100
+ 50245 if (h and 32) = 32 then gosub 55000 : goto 50260
+ 50250 on h gosub 54000, 54100, 54200, 54300
  50260 if s2 = 0 then 50180
  50270 :
  50280 goto 59000
  50998 :
  50999 :
  51000 rem handle just data
- 51005 print "data: ";
- 51010 s=h and 63
- 51020 gosub 60000
- 51025 print b;" bytes into segment";s
- 51030 ss(s) = ss(s) + b
+ 51010 print "data: segment"; sg; ";";
+ 51020 b = h and 63
+ 51025 print b;" bytes"
+ 51030 gp(sg) = gp(sg) + b
  51040 if ps > 1 then 51500
  51050 for i=1 to b  : rem skip the data
  51060 get#2,c$:next
  51070 return
  51498 :
- 51499 rem tranfer data to executable
+ 51499 rem tranfer data to executable (pass 2)
  51500 return
  51998 :
  51999 :
- 52000 rem title of a segment
- 52010 s=h and 63
- 52015 print "title of segment";s;" is: ";
- 52020 t$=""
- 52030 get#2,c$:if c$<>"" then t$=t$+c$:print c$;:goto 52030
- 52035 print
- 52040 if ps > 1 then return
- 52050 st$(s) = t$
- 52060 return
+ 52000 rem set current segment (pass 1 and 2)
+ 52010 sg = h and 63
+ 52020 print "current segment is now"; sg
+ 52030 return
+ 52399 :
  52998 :
  52999 :
  53000 rem unused command
@@ -211,15 +206,42 @@
  54000 rem define symbol
  54010 gosub 60100 : s=b
  54020 gosub 60100
- 54030 sv(s) = b
+ 54025 print "put symbol"; s; "at address"; b
+ 54030 ss(s) = -1 : sv(s) = b :rem segnum=-1 means no segment
  54040 return
  54099 :
  54100 rem force segment address
- 54110 gosub 60000 : g = b
- 54120 gosub 60100
- 54130 sa(g) = b
- 54140 return
+ 54110 gosub 60100
+ 54115 print "put segment"; sg; " at address"; b
+ 54120 ga(sg) = b
+ 54130 return
  54199 :
+ 54200 rem put symbol in segment
+ 54210 gosub 60100 : s=b    :rem symbol #
+ 54220 gosub 60000          :rem # bytes
+ 54225 print "put symbol"; s; " in segment"; sg; ", offset"; gp(sg); ",";
+ 54227 : print b; " byte";:if b>1 then print"s": else print
+ 54230 ss(s) = sg : sv(s) = gp(sg) : gp(sg) = gp(sg) + b
+ 54240 return
+ 54299 :
+ 54300 rem name segment
+ 54310 print "title of segment";sg;" is: ";
+ 54320 t$=""
+ 54330 get#2,c$:if c$<>"" then t$=t$+c$:print c$;:goto 54330
+ 54340 print
+ 54350 if ps > 1 then return
+ 54360 st$(s) = t$
+ 54370 return
+ 54399 :
+ 55000 rem insert symbol
+ 55010 s = h and 15 : d = h and 16
+ 55020 gosub 60100
+ 55030 print "insert symbol"; b; "here as"; s; "bytes, ";
+ 55040 if d=0 then print "low"; : else print "high";
+ 55050 print " byte first"
+ 55060 return
+ 55998 :
+ 55999 :
  59000 print "all done"
  59010 close 4:close 2
  59020 end
