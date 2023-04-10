@@ -1,4 +1,4 @@
-!- compiler.3
+!- compiler.4
    10 print"{down}piler.com{down}"
    20 dim w$(10),ml$(10),pt$(10)
    30 nw=0
@@ -10,29 +10,26 @@
    75 :
    90 nw=nw-1
    99 :
-  100 data open,"i1 @ 1024, i1 @ 1025, i1 @ 1026"
+  100 data ints,"i1 @ 1024,i2 @ 1025,i3 @ 1027"
   101 data a9,00,20,bd,ff,a9,04,a2,04
   102 data a0,00,20,ba,ff,20,c0,ff,{arrow left}
   119 :
-  120 data start,"i1 @ 1024"
+  120 data reg1,"i1 @ a"
   121 data a2,04,20,c9,ff,{arrow left}
   139 :
-  140 data hello,"i2 @ 1024"
-  141 data a9,48,20,d2,ff,a9,45,20,d2,ff
-  142 data a9,4c,20,d2,ff,a9,4c,20,d2,ff
-  143 data a9,4f,20,d2,ff,a9,0d,20,d2,ff
-  144 data {arrow left}
+  140 data reg2,"i2 @ yx"
+  141 data 20,d2,ff,{arrow left}
   159 :
-  160 data stop,"i1 @ 1024"
+  160 data regs,"i1 @ a,i2 @ xy
   161 data 20,cc,ff,{arrow left}
   179 :
-  180 data close,"i1 @ 1024"
+  180 data close,"i1 @ a"
   181 data a9,04,20,c3,ff,{arrow left}
   199 :
   200 data {arrow left}end
   480 :
   490 of=4:open of,4,3
-  500 input "word number";w
+  500 input "{down}word number";w
   505 if w<0 then close of:end
   510 print "template=";pt$(w)
   515 print"separate parameters with a '.'"
@@ -54,7 +51,7 @@
  1130 print#of,ml$(w);
  1140 if s1=0 then 1100
  8999 :
- 9000 print#of,chr$(96);
+ 9000 print#of,chr$(96)
  9010 close of
  9020 close 1
  9030 end
@@ -68,13 +65,13 @@
  11000 rem compile parameters
  11010 rem  w  = index of parameter template (word number)
  11020 rem  p$ = string to be compiled
- 11030 it=1:ip=1
+ 11030 it=0:ip=0
  11040 print " (what var type?) ";
  11050 : s$=""
- 11060 : v$=mid$(pt$(w), it, 1):it=it+1
- 11070 : c$=mid$(pt$(w), it, 1)
- 11080 : if c$>="0" and c$<="9" then s$=s$+c$:it=it+1:goto 11070
- 11090 : print" - ";:rem   "  var type: ";v$;" - ";
+ 11060 : it=it+1:v$=mid$(pt$(w), it, 1)
+ 11070 : it=it+1:c$=mid$(pt$(w), it, 1)
+ 11080 : if c$>="0" and c$<="9" then s$=s$+c$:goto 11070
+ 11090 : print" var type: ";v$;" - ";
  11100 :
  11110 : if v$="i" then gosub 12000:goto 11200
  11120 : if v$="s" then gosub 13000:goto 11200
@@ -84,11 +81,11 @@
  11210 :
  11220 return
  11999 :
- 12000 if s$="" then print"missing int size": goto 12900
- 12010 s=val(s$):if s<1 or s>2 then print"unsupported int size":goto 12900
+ 12000 if s$="" then print"missing int siye": goto 12900
+ 12010 s=val(s$):if s<1 or s>4 then print"unsupported int size":goto 12900
  12020 :
  12030 n$="" : print " (fetch the number) ";
- 12040 c$=mid$(p$, ip, 1):ip=ip+1
+ 12040 ip=ip+1:c$=mid$(p$, ip, 1)
  12050 if c$>="0" and c$<="9" then n$=n$+c$:goto 12040
  12060 n=val(n$):n$=""
  12070 :
@@ -98,14 +95,15 @@
  12110 : next i
  12120 :
  12130 it=it+1:if mid$(pt$(w), it, 1) <> "@" then print"unknown template command":goto 12900
- 12140 it=it+2
+ 12140 it=it+1
  12150 :
  12160 print " (fetch storage location) ";
  12170 l$="":lt=0 :rem lt=loc type: 0=dec ad, 1=hex ad, 2=reg
- 12180 c$=mid$(pt$(w), it, 1):it=it+1
- 12190 if instr("0123456789", c$) > 0  then   l$=l$+c$:goto 12180
- 12200 if instr("$abcdef", c$) > 0  then lt=1:l$=l$+c$:goto 12180
- 12210 if instr("axy", c$) > 0  then lt=2    :l$=l$+c$:goto 12180
+ 12180 it=it+1:c$=mid$(pt$(w), it, 1)
+ 12190 : if instr("0123456789", c$) > 0  then   l$=l$+c$:goto 12180
+ 12195 : if c$="$" then                         lt=1:goto 12180
+ 12200 : if lt=1 and instr("abcdef", c$) > 0  then l$=l$+c$:goto 12180
+ 12210 : if instr("axy", c$) > 0  then lt=2    :l$=l$+c$:goto 12180
  12220 if lt=2 then 12500: rem handle register storage
  12230 if lt=1 then l=dec(right$(l$,len(l$)-1))
  12240 if lt=0 then l=val(l$)
@@ -132,9 +130,9 @@
  12590 :
  12600 goto 12900
  12899 :
- 12900 print " (advance indices past next ',') ";
- 12910 it=instr(pt$(w), ".", it) + 1
- 12920 ip=instr(p$, ".", ip) + 1
+ 12900 print " (advance indices to next ',') ";
+ 12910 it=instr(pt$(w), ",", it)
+ 12920 ip=instr(p$, ".", ip)
  12930 :
  12932 print#of
  12934 print
