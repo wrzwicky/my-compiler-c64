@@ -1,4 +1,4 @@
-!- compiler.2
+!- compiler.3
    10 print"{down}piler.com{down}"
    20 dim w$(10),ml$(10),pt$(10)
    30 nw=0
@@ -30,9 +30,12 @@
   181 data a9,04,20,c3,ff,{arrow left}
   199 :
   200 data {arrow left}end
-  490 of=3:open of,3
+  480 :
+  490 of=4:open of,4,3
   500 input "word number";w
+  505 if w<0 then close of:end
   510 print "template=";pt$(w)
+  515 print"separate parameters with a '.'"
   520 input "parameters";p$
   530 gosub 11000
   540 goto 500
@@ -42,17 +45,17 @@
  1010 if right$(f$,4)=".fig" then f$=left$(f$,len(f$)-4)
  1015 scratch (f$+".ml")
  1020 open 1,8,2,f$+".fig,s,r"
- 1030 open 2,8,3,f$+".ml,p,w"
- 1040 print#2,chr$(0)chr$(2*16);
+ 1030 of=2:open of,8,3,f$+".ml,p,w"
+ 1040 print#of,chr$(0)chr$(2*16);
  1099 :
  1100 input#1,w$:s1=st
  1110 gosub 10000:rem find word
  1120 printw$;w
- 1130 print#2,ml$(w);
+ 1130 print#of,ml$(w);
  1140 if s1=0 then 1100
  8999 :
- 9000 print#2,chr$(96);
- 9010 close 2
+ 9000 print#of,chr$(96);
+ 9010 close of
  9020 close 1
  9030 end
  10000 rem search for w$ and return its
@@ -69,15 +72,15 @@
  11040 print " (what var type?) ";
  11050 : s$=""
  11060 : v$=mid$(pt$(w), it, 1):it=it+1
- 11070 : c$=mid$(pt$(w), it, 1):it=it+1
- 11080 : if c$>="0" and c$<="9" then s$=s$+c$:goto 11070
- 11090 : print "  var type: ";v$;" - ";
+ 11070 : c$=mid$(pt$(w), it, 1)
+ 11080 : if c$>="0" and c$<="9" then s$=s$+c$:it=it+1:goto 11070
+ 11090 : print" - ";:rem   "  var type: ";v$;" - ";
  11100 :
  11110 : if v$="i" then gosub 12000:goto 11200
  11120 : if v$="s" then gosub 13000:goto 11200
  11130 : print "unknown": goto 9000
  11140 :
- 11200 if it<len(pt$(w)) and ip<len(p$) then 11040
+ 11200 if it>1 and ip>1 then 11040
  11210 :
  11220 return
  11999 :
@@ -109,9 +112,10 @@
  12250 :
  12260 print " (generate code to store the bytes) ";
  12270 for i=0 to s-1
- 12280 : print#of,chr$()mid$(n$,i+1,1);
+ 12280 : print#of,chr$(169)mid$(n$,i+1,1);
  12290 : lh=int(l/256):ll=l-lh*256
- 12300 : print#of,chr$()chr$(l)chr$(h);
+ 12300 : print#of,chr$(141)chr$(ll)chr$(lh);
+ 12305 : l=l+1
  12310 : next
  12320 :
  12330 goto 12900
@@ -119,7 +123,7 @@
  12500 if len(l$) <> len(n$) then print "number of regs doesn't match specified int size":goto 12900
  12510 :
  12520 rem set up ld? instructions
- 12530 ld(1)=...:ld(2)=...:ld(3)=...
+ 12530 ld(1)=169:ld(2)=162:ld(3)=160
  12540 :
  12550 print " (load reg(s)) ";
  12560 for i=1 to len(l$)
@@ -129,11 +133,10 @@
  12600 goto 12900
  12899 :
  12900 print " (advance indices past next ',') ";
- 12910 do until mid$(pt$(w),it,1)=",":it=it+1:loop
- 12920 it=it+1
+ 12910 it=instr(pt$(w), ".", it) + 1
+ 12920 ip=instr(p$, ".", ip) + 1
  12930 :
- 12940 do until mid$(p$,ip,1)=",":ip=ip+1:loop
- 12950 ip=ip+1
- 12960 :
- 12970 return
+ 12932 print#of
+ 12934 print
+ 12940 return
  12999 :
