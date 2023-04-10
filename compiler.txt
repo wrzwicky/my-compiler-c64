@@ -1,0 +1,58 @@
+FIG Compiler with ParseC - program info
+    by William R. Zwicky   25 Aug 91
+----------------------------------------
+
+I?     StackPtr  SP   Points to next free el in Stack[]
+STRUCT Stack[]  <     For expression evaluation
+  Var$,        VS$()   A Token
+  Operator$,   OS$()   An operator
+  Priority,    PS()    Current priority of operator
+  Type$        TS$()   Var type (int, float, etc.)
+  >
+I?     MathSP    MS   Ptr to top el in "run time" math stack
+I?     MaxMS     MM   Highest MS used up to now
+I?     MS.Bank   MB   Bank for MS
+
+I1     NumWords  NW   Number of words known
+STRUCT Word[]  <      Keeps track of all words known by Parsec
+  Name$,       W$()    The word itself
+  Bank,        B()     What bank it's in
+  ItemNum      N()     It's item number within the bank
+  >
+
+I1     MaxBanks  BS   Max number of banks available
+I1     NumBanks  NB   Number of banks used
+STRUCT Bank[]  <      Keeps track of the banks the words are in
+  Type$,       BT$()   The type (name) of the bank (ie. I2)
+  NumIn        NN()    Number of items in bank
+  >
+
+---Other possible vars:---
+DO  disk output flag
+PO  printer output flag
+
+Str    SelCS     SC$  Linker code(s) to Select Code segment
+
+
+-------------------------------------
+
+RAM allocation for variables
+  Compiler:
+    Does nothing!!
+    Each word is referenced in .OBJ file as a token [Bank, Word]
+  Linker:
+    generate base ads for each bank
+    generate offsets for each word
+      -needs a current location pointer for each bank
+      Word[latest]:Location _ Pointer
+      Pointer _+ SizeOf[Word]
+
+Tuple compilation in the expression compiler
+ -On entry, if the first operation is not assignment, it should be Convert
+  (like C "cast").  The operation takes a variable (or maybe a constant)
+  and its type, and a requested type, and if the types are different,
+  converts the var to the new type.  For assignment, Convert is implied.
+  For efficiency, the expression compiler will first check to see if a
+  conversion needs to be done, and if so, and it's to a tuple, then it
+  will keep track of the elements in the target tuple type and convert
+  each element as it is completed.
