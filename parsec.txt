@@ -42,4 +42,4 @@ RAM allocation for variables
       Word[latest]:Location _ Pointer
       Pointer _+ SizeOf[Word]
 
-SYS 65487 is CHRIN
+SYS 65487 is CHRIN (like 'input', but without "?" prompt)

@@ -1,18 +1,19 @@
-!- parsec.1.2
+!- parsec.1.3
+!- added 'prin' command
 !- doesn't work, = not implemented at 10380
    10 print "{white}{clear}{down}{down}welcome to zparser compiler"
-   15 open 8,3
+   15 do=0:po=0:rem no device output
    20 ss=100:dim vs$(ss),os$(ss),ps(ss),       ts$(ss)
    25 ps(0)=0
    30 dim va$(100),vt$(100)
-   32 dim an$(20),ad(20),av(20,20),at(20):     rem values=av(var #,subscript #)
+   32 dim an$(20),ad(20),at$(20),al(20):       rem name,dim,type,location of [1]
    39 :
    40 read ne:dim er$(ne):for i=1 to ne
    50 read er$(i):next
-   51 data 13,missing var,early end of line,syntax,too many '='
+   51 data 14,missing var,early end of line,syntax,too many '='
    52 data illegal self operator,equation left of '=',illegal op this side of '='
    53 data illegal variable name,divide by 0,stack overflow,undefined variable
-   54 data too many close parenthesis,unknown var type
+   54 data too many close parenthesis,unknown var type,var already exists
    59 :
    60 read no:dim op$(no):for i=1 to no
    62 read op$(i):next
@@ -48,9 +49,10 @@
   200 if left$(f$,4)="quit" then close 8:end
   210 if left$(f$,4)<>"help" then 300
   220 print "available commands:"
-  230 print "  decl - declare a variable"
-  240 print "  dump - list all variables"
-  245 print "  file - open an executable file"
+  225 print "  decl - declare a variable"
+  230 print "  dump - list all variables"
+  235 print "  file - open an executable file"
+  240 print "  prin - send program to printer"
   250 print "  help - display this"
   260 print "  quit - end program"
   270 goto 100
@@ -59,25 +61,30 @@
   305 : l=len(f$)
   310 : for p1=4 to l
   320 :   if mid$(f$,p1,1)<>" " then next
-  330 : if p1>l then er=1:l=330:ptr=5            :gosub 30000:goto 100
+  330 : if p1>l then er=1:l=330:ptr=5:            gosub 30000:goto 100
   332 : for p2=p1+1 to l
   334 :   if mid$(f$,p2,1)<>" " then next
-  336 : if p2>l then er=13:l=336:ptr=p2          :gosub 30000:goto 100
+  336 : if p2>l then er=13:l=336:ptr=p2:          gosub 30000:goto 100
   340 : vr$=mid$(f$,p1+1,p2-p1-1):              nt$=mid$(f$,p2+1,l-p2-1)
   350 : mk=1:gosub 20500
+  355 : if vr<nv then er=14:ptr=p1+1:             gosub 30000:goto 100
   360 : print "variable '";vr$;"' created as ";nt$
   370 : goto 100
   380 :
-  390 if left$(f$,4)<>"file" then 900
+  390 if left$(f$,4)<>"file" then 490
   400 : for i=4 to len(f$)
   410 :   if mid$(f$,i,1)<>" " then next
   420 : if i>len(f$) then er=1:l=420:ptr=i       :gosub 30000:goto 100
   430 : n$=mid$(f$,i+1,len(f$)-i-1)
-  435 : rem close 8
-  440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34)
+  440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34):do=1:open 8,8,2
   450 : pl=0
-  460 : gosub 23000:print#8,"dim var(100)"
+  460 : l$="dim var(100)":gosub 23000
   470 : goto 100
+  480 :
+  490 if left$(f$,4)<>"prin" then 900
+  500 : if po=0 then po=1:open 4,4               :print "printer on":goto 520
+  510 : if po=1 then po=0:close 4                :print "printer off"
+  520 : goto 100
   898 :
   899 :
   900 gosub 10000
@@ -205,7 +212,7 @@
  21200 op$=tp$:op=tr
  21210 if vs$(sp-1)<>"t" then 21220
  21212 vs$(sp-1)="t+"
- 21214 gosub 23000:print#8,"var(";str$(es);")=t":es=es+1
+ 21214 l$="var("+str$(es)+")=t":gosub23000:es=es+1
  21220 vs$(sp)=v2$
  21225 os$(sp)=op$
  21230 ps(sp)=op
@@ -224,11 +231,14 @@
  22060 :
  22070 :
  23000 rem generate next line number
+ 23001 rem  and send line to devices
  23010 pl=pl+10
- 23020 print#8,pl;
- 23030 return
- 23040 :
- 23050 :
+ 23020 print pl;l$;tab(25)n1$;tab(32)n2$
+ 23030 if do=1 then print#8,l$
+ 23040 if po=1 then print#4,pl;l$
+ 23050 return
+ 23998 :
+ 23999 :
  29980 :
  29990 :
  30000 if pe=0 then return
@@ -240,26 +250,23 @@
  30060 :
  31000 for i=1 to 10
  31010 printvs$(i),os$(i),ps(i):next:end
- 41000 gosub23000:print#8,"t=";v1$;"+";v2$;
- 41010 print tab(20);n1$;tab(30);n2$
+ 40998 :
+ 40999 :
+ 41000 l$="t="+v1$+"+"+v2$:gosub 23000
  41900 goto 21180
  41998 :
  41999 :
- 42000 gosub23000:print#8,"t=";v1$;"-";v2$;
- 42010 print tab(20);n1$;tab(30);n2$
+ 42000 l$="t="+v1$+"-"+v2$:gosub 23000
  42900 goto 21180
  42998 :
  42999 :
- 43000 gosub23000:print#8,"t=";v1$;"*";v2$;
- 43010 print tab(20);n1$;tab(30);n2$
+ 43000 l$="t="+v1$+"*"+v2$:gosub 23000
  43900 goto 21180
  43998 :
  43999 :
- 44000 gosub23000:print#8,"t=";v1$;"/";v2$;
- 44010 print tab(20);n1$;tab(30);n2$
+ 44000 l$="t="+v1$+"/"+v2$:gosub 23000
  44900 goto 21180
  44998 :
  44999 :
- 45000 gosub23000:print#8,"t=";v1$;"^";v2$;
- 45010 print tab(20);n1$;tab(30);n2$
+ 45000 l$="t="+v1$+"^"+v2$:gosub 23000
  45900 goto 21180
