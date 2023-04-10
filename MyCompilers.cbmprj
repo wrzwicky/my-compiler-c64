@@ -7,7 +7,7 @@
     <Executable>mycompilers.prg</Executable>
     <StartAddress>2049</StartAddress>
     <FilesGlobal>False</FilesGlobal>
-    <BatchMode>False</BatchMode>
+    <BatchMode>True</BatchMode>
     <AppendToDisk>False</AppendToDisk>
     <GenToDisk>False</GenToDisk>
     <BuildToPrgFile>True</BuildToPrgFile>
@@ -23,7 +23,7 @@
     <UsingKickAssembler>False</UsingKickAssembler>
     <KickOutputFile />
     <KickConfigFile />
-    <KickGenDebugInfo>True</KickGenDebugInfo>
+    <KickGenDebugInfo>False</KickGenDebugInfo>
     <Cartridge>
         <CrtBuildingCartridge>False</CrtBuildingCartridge>
         <CrtSignature>C64 CARTRIDGE</CrtSignature>
@@ -44,13 +44,8 @@
         <PreBuildCommands />
         <PostBuildCommands />
     </BuildEvents>
-    <BuildList>
-        <FileName>README.txt</FileName>
-        <FileName>rekanizer.bas</FileName>
-        <FileName>parsec.bas</FileName>
-        <FileName>parsec.txt</FileName>
-    </BuildList>
-    <DetermineBuildOrder>0</DetermineBuildOrder>
+    <BuildList />
+    <DetermineBuildOrder>1</DetermineBuildOrder>
     <PaddingByte>0</PaddingByte>
     <!--Screen designer settings-->
     <AssyBinaryFileLocation />
@@ -60,13 +55,13 @@
     <SourceFiles>
         <SourceFile>
             <Name>parsec.bas</Name>
-            <PrgName />
+            <PrgName>parsec.prg</PrgName>
             <FileType>1</FileType>
             <IncludeInBuild>True</IncludeInBuild>
             <Regions />
             <Breakpoints />
             <Bookmarks />
-            <Topmost>False</Topmost>
+            <Topmost>True</Topmost>
             <FileOpen>True</FileOpen>
         </SourceFile>
         <SourceFile>
@@ -93,7 +88,7 @@
         </SourceFile>
         <SourceFile>
             <Name>rekanizer.bas</Name>
-            <PrgName />
+            <PrgName>rekanizer.prg</PrgName>
             <FileType>1</FileType>
             <IncludeInBuild>True</IncludeInBuild>
             <Regions />

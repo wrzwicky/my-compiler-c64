@@ -1,5 +1,5 @@
-!- parsec2.00
-!- verbose code gen
+!- parsec2.01
+!- edit docs
 !- = not implemented
     0 rem parsec2.00, 11 july 1990
     1 rem  by billy zwicky
@@ -35,7 +35,7 @@
   220 print "available commands:"
   225 print "  decl - declare a variable"
   230 print "  dump - list all variables"
-  235 print "  file - open an executable file"
+  235 print "  file - open an object file"
   240 print "  prin - send program to printer"
   250 print "  help - display this"
   260 print "  quit - end program"
