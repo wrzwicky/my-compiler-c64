@@ -1,5 +1,5 @@
-!- parsec.1.33
-!- added vars for testing
+!- parsec.1.34
+!- verbose parsing
 !- doesn't work, = not implemented at 10380
    10 print "{white}{clear}{down}{down}welcome to zparser compiler{down}"
    15 do=0:po=0:rem no device output
@@ -39,7 +39,6 @@
   270 goto 100
   290 :
   300 if left$(f$,4)<>"decl" then 390
-  302 : er=0:pe=1
   305 : l=len(f$)
   310 : for p1=4 to l
   320 :   if mid$(f$,p1,1)<>" " then next
@@ -74,20 +73,19 @@
  9970 :
  9980 :
  9990 :
- 10000 ptr=0:part=1:sp=1:er=0:pe=1             :es=nv+1:z$=chr$(0)
+ 10000 ptr=0:part=1:sp=1:er=0:pe=1             :es=nv+1
  10050 :
  10060 rem get next char
  10070 ptr=ptr+1
- 10080 c$=mid$(f$,ptr,1):c=asc(c$+z$)
+ 10080 c$=mid$(f$,ptr,1)
  10085 if c$="{arrow left}" then op$=c$:                   gosub 21000:return
  10090 if c$<"0" or c$>"9" then 10130
  10100 : if part=1 then part=2:goto 20000        :rem # expected
  10110 : if part=2 then op$="*":gosub 21000      :goto 20000:rem implied *
  10120 :
- 10125 if c<128 then 10520:rem unkn chr
- 10130 if left$(bt$(c),1)<>"*"then 10170
+ 10130 if c$<"a" or c$>"z" then 10170
  10140 : if part=1 then part=2:gosub 20200       :goto 10060:rem var expctd
- 10150 : if part=2 then op=2:gosub 21000 :gosub 20200:goto 10060:rem implied *
+ 10150 : if part=2 then op$="*":gosub 21000 :gosub 20200:goto 10060:rem implied *
  10160 :
  10170 if c$<>"+" and c$<>"*" and c$<>"/"       and c$<>"^" then 10210
  10180 : if part=1 then er=1:l=10180:gosub        60000:return:rem var needed
@@ -119,6 +117,7 @@
  19980 :
  19990 :
  20000 rem extract constant
+ 20005 print"extract constant
  20010 vr$=c$:pd=0:ee=0
  20020 ptr=ptr+1:c$=mid$(f$,ptr,1)
  20030 if c$="{arrow left}" then 20120
@@ -134,15 +133,18 @@
  20130 :
  20140 :
  20200 rem extract variable
+ 20205 print  "extract variable
  20210 :
- 20220 b=c
+ 20220 vr$=c$
  20230 ptr=ptr+1:c$=mid$(f$,ptr,1)
- 20240 n=asc(c$+z$)
- 20260 if left$(c$,1)="[" then 20400:rem other chr req spcl atn, put them here
- 20270 rem i.e. '[' means array
- 20310 :
- 20320 vr$="var("+str$(b)+","+str$(v)+")":      nt=b:nt$=bt$(b)
- 20330 return
+ 20240 if c$="[" then 20400:rem if any other ops req spcl atn, put them here
+ 20250 rem i.e. '[' means array
+ 20260 if c$<"0" or c$>"z" then 20300
+ 20280 vr$=vr$+c$:goto 20230
+ 20290 :
+ 20300 ptr=ptr-1
+ 20310 pe=0:mk=0:gosub 20500:pe=1
+ 20320 if er=0 then vr$="var("+str$(vr)+")"    :nt$=vt$(vr):return
  20350 :
  20400 rem
  20410 : for i=1 to nf
@@ -154,6 +156,7 @@
  20498 :
  20499 :
  20500 rem var$->var# :  vr$->vr
+ 20502 print  "var$->var#
  20505 er=0
  20510 if left$(vr$,1)<"a" or left$(vr$,1)>"z" then print"vr$<>var @20510":return
  20520 if nv=0 then vr=1:goto 20560
@@ -167,17 +170,18 @@
  20620 :
  20630 :
  21000 rem push var,op,priority
- 21005 v2=vr:n2=nt
- 21010 p=5     :rem if op$ is a func
- 21020 if op="{arrow left}" then op=0
- 21030 rem op="=" then op=1
- 21040 if op=3 or op=4 then p=2
- 21050 if op=2 or op=5 then p=3
- 21060 if op=6 then p=4
- 21065 p=p+pr
- 21070 if p>ps(sp-1) then pv$=vr$:              goto 21210
- 21080 tp=op:tr=p
- 21090 :
+ 21002 print  "push var,op,priority
+ 21005 v2$=vr$:n2$=nt$
+ 21010 op=5    :rem if op$ is a func
+ 21020 if op$="{arrow left}" then op=0
+ 21030 if op$="=" then op=1
+ 21040 if op$="+" or op$="-" then op=2
+ 21050 if op$="*" or op$="/" then op=3
+ 21060 if op$="^" then op=4
+ 21065 op=op+pr
+ 21070 if op>ps(sp-1) then pv$=vr$:             goto 21210
+ 21080 tp$=op$:tr=op
+ 21090 rem
  21100 gosub 22000:v1$=vr$:n1$=nt$
  21110 if v1$="t+" then es=es-1:v1$="var("+str$(es)+")"
  21120 if op$="+" then 41000
@@ -202,11 +206,12 @@
  21260 return
  21270 :
  22000 rem pull stuff
+ 22005 print  "pull stuff
  22010 sp=sp-1
  22020 vr$=vs$(sp)
- 22030 op =os(sp)
- 22040 p  =pr(sp)
- 22045 nt =ts(sp)
+ 22030 op$=os$(sp)
+ 22040 op =pr(sp)
+ 22045 nt$=ts$(sp)
  22050 return
  22060 :
  22070 :
@@ -281,7 +286,7 @@
  45000 l$="t="+v1$+"^"+v2$:gosub 23000
  45900 goto 21180
  50000 rem dimension arrays used
- 50010 ss=100:dim vs$(ss),os(ss),ps(ss),        ts(ss)
+ 50010 ss=100:dim vs$(ss),os$(ss),ps(ss),       ts$(ss)
  50015 rem stack: var,op,priority,type
  50020 ps(0)=0:rem force finish a line
  50030 dim va$(100),vt$(100)
@@ -305,7 +310,7 @@
  51500 rem * data is at ln 63030
  60000 if pe=0 then return
  60001 if er<1 or er>ne then print"bad error # ("er") in"l:return
- 60002 print " {left}"tab(ptr-1);"^"
+ 60002 print " {left}"tab(ptr-1);"^ ("c$")"
  60003 print "error in line"l":":printer$(er)
  60004 return
  60005 :
@@ -316,10 +321,7 @@
  63010 rem  because of no restore # cmd
  63020 :
  63030 rem ops-for ln 51000
- 63040 data {arrow left}op,(,),+,-,*,/,^
- 63050 data {arrow left}*i2,a,b,c
- 63060 data {arrow left}*f4.1,x,y
- 63490 data {arrow left}end
+ 63040 data {arrow left}op,(,),+,-,*,/,^,{arrow left}end
  63499 :
  63500 rem errors-for ln 40
  63510 data 16,missing var,early end of line,syntax,too many '='
@@ -327,4 +329,3 @@
  63530 data illegal variable name,divide by 0,stack overflow,undefined variable
  63540 data too many close parenthesis,unknown var type,var already exists
  63550 data too many banks,too many tokens in this bank
- 63600 data
