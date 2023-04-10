@@ -1,12 +1,12 @@
-!- parsec2.02
-!- implement =, error on assign to constant
-!- parens don't work
-    0 rem parsec2.02, 8 sep 1990
+!- parsec2.10
+!- rearrange code, verbose parse
+!- parens and = works!
+    0 rem parsec2.10, 21 jan 1991
     1 rem  by bill zwicky
     9 :
-   10 print "{white}{clear}{down}{down}welcome to zparser compiler, v2.01{down}"
+   10 print "{white}{clear}{down}{down}welcome to zparser compiler, v2.10{down}"
    15 do=0:po=0:rem no device output
-   20 gosub 50000:rem init arrays
+   20 gosub 40000:rem init arrays
    30 rem (init tokens)
    39 :
    40 read ne:dim er$(ne):for i=1 to ne
@@ -16,18 +16,17 @@
    80 pe=1:rem print all errors
    82 :
    89 rem open bank for exp. eval. stack
-   90 ty$="math.stack":gosub 26000
+   90 ty$="math.stack":gosub 36000
    92 if er<>0 then print "can't open system stack!" :goto 9000
    94 mb=b :rem record bank for math stack
    96 :
    98 print "{down}ready for formulae."
   100 print "{down}ok."
   110 f$=""
-  120 sys 65487:if peek(780)=13 then 135
-  130 f$=f$+chr$(peek(780)):goto 120
-  135 if f$=" " then print:goto 110
+  120 input f$
+  130 if f$="" then 120
   137 f$=f$+"{arrow left}"
-  140 print:print ":{left}";
+  140 print ":{left}";
   150 if left$(f$,4)<>"dump" then 200
   155 for i=1 to nw
   160 : b$=bt$(b(i))
@@ -50,24 +49,24 @@
   305 : l=len(f$)
   310 : for p1=4 to l
   320 :   if mid$(f$,p1,1)<>" " then next
-  330 : if p1>l then er=1:l=330:ptr=5:            gosub 60000:goto 100
+  330 : if p1>l then er=1:l=330:ptr=5:            gosub 45010:goto 100
   332 : for p2=p1+1 to l
   334 :   if mid$(f$,p2,1)<>" " then next
-  336 : if p2>l then er=13:l=336:ptr=p2:          gosub 60000:goto 100
+  336 : if p2>l then er=13:l=336:ptr=p2:          gosub 45010:goto 100
   340 : w$ =mid$(f$,p1+1,p2-p1-1):              ty$="*"+mid$(f$,p2+1,l-p2-1)
-  350 : gosub 26000:if er<>0 then 100
-  355 : gosub 27000:if er<>0 then 100
-  360 : rem   "variable '";vr$;"' created as ";nt$
+  350 : gosub 36000:if er<>0 then 100
+  355 : gosub 37000:if er<>0 then 100
+  360 : print "variable '";w$;"' created as ";ty$
   370 : goto 100
   380 :
   390 if left$(f$,4)<>"file" then 490
   400 : for i=4 to len(f$)
   410 :   if mid$(f$,i,1)<>" " then next
-  420 : if i>len(f$) then er=1:l=420:ptr=i       :gosub 60000:goto 100
+  420 : if i>len(f$) then er=1:l=420:ptr=i       :gosub 45010:goto 100
   430 : n$=mid$(f$,i+1,len(f$)-i-1)
   440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34):do=1:open 8,8,2
   450 : pl=0
-  460 : l$="dim var("+str$(bs)+",100)":gosub 23000
+  460 : l$="dim var("+str$(bs)+",100)":gosub 33000
   470 : goto 100
   480 :
   490 if left$(f$,4)<>"prin" then 900
@@ -76,246 +75,250 @@
   520 : goto 100
   898 :
   899 :
-  900 gosub 10000
+  900 gosub 20000
   910 goto 100
  9970 :
  9980 :
  9990 :
- 10000 ptr=0:part=1:sp=1:er=0:pe=1             :ms=0
- 10050 :
- 10060 rem get next char
- 10070 ptr=ptr+1
- 10080 c$=mid$(f$,ptr,1)
- 10082 if c$=" " then 10060
- 10085 if c$="{arrow left}" then op$=c$:                   gosub 21000:return
- 10090 if c$<"0" or c$>"9" then 10130
- 10100 : if part=1 then part=2:goto 20000        :rem extract #
- 10110 : if part=2 then op$="*":gosub 21000      :goto 20000:rem implied *
- 10120 :
- 10130 if c$<"a" or c$>"z" then 10170
- 10140 : if part=2 then op$="*":gosub 21000      :rem implied mult
- 10145 : part=2
- 10150 : gosub 20200 :if er<>0 then return       :rem extract a var
- 10155 : goto 10060
- 10160 :
- 10170 if c$<>"+"and c$<>"*"and c$<>"/"and c$<>"^"and c$<>"="andc$<>","then 10210
- 10180 : if part=1 then er=1:l=10180:gosub        60000:return:rem var needed
- 10190 : if part=2 then op$=c$:gosub 21000       :part=1:goto 10060
- 10200 :
- 10210 if c$<>"-" then 10300
- 10220 : if part=2 then op$="-":gosub 21000       :part=1:goto 10060
- 10230 : op$="{sh asterisk}":gosub 21000:goto 10060
- 10290 :
- 10300 if c$<>"(" then 10340
- 10310 : if part=1 then pr=pr+10:goto 10060
- 10320 : if part=2 then op$="*":gosub 21000       :pr=pr+10:part=1:goto 10060
- 10330 :
- 10340 if c$<>")" then 10380
- 10350 : if part=1 then er=1:l=10350:gosub        60000:return
- 10355 : rem else ...
- 10360 :  if pr>10 then pr=pr-10
- 10365 :  goto 10060
- 10370 :
- 10380 rem anything else to process?
- 10510 :
- 10520 rem what's this char?
- 10530 er=3:l=10530:gosub 60000:return
- 10540 :
- 19980 :
- 19990 :
- 20000 rem extract constant
- 20010 vr$=c$:pd=0:ee=0:nt$="i"
- 20020 ptr=ptr+1:c$=mid$(f$,ptr,1)
- 20030 if c$="{arrow left}" then 20120
- 20040 if c$=" " then 20120
- 20050 if c$>="0" and c$<="9" then              vr$=vr$+c$:goto 20020
- 20060 if c$<>"." then 20090
- 20070 : if pd=1 then 20120
- 20080 : pd=1:vr$=vr$+c$:goto 20020
- 20090 if c$<>"e" then 20120
- 20100 : if ee=1 then 20120
- 20110 : ee=1:vr$=vr$+c$:goto 20020
- 20120 ptr=ptr-1:goto 10060
- 20130 :
- 20140 :
- 20200 rem extract variable
- 20210 :
- 20220 er=0 : w$=c$
- 20230 ptr=ptr+1 : c$=mid$(f$,ptr,1)
- 20260 if c$<"0" or (c$>"9" and c$<"a") or c$>"z" and c$<>"." then 20300
- 20280 w$=w$+c$ : goto 20230
- 20290 :
- 20300 ptr=ptr-1
- 20310 gosub 24000
- 20320 if d%<>0 then er=11:l=20200              :goto 60000 :rem undef'd var
- 20330 vr$="var(" + str$(b(wl%)) + "," +  str$(n(wl%)) + ")"
- 20340 nt$=bt$(b(wl%))
- 20350 return
- 20498 :
- 20499 :
- 21000 rem push var,op,priority
- 21005 v2$=vr$:n2$=nt$
- 21010 op=5    :rem if op$ is a func
- 21020 if op$="{arrow left}" then op=0:pr=0                :rem force end of expression
- 21030 if op$="=" then op=1
- 21040 if op$="+" or op$="-" then op=2
- 21050 if op$="*" or op$="/" then op=3
- 21060 if op$="^" then op=4
- 21065 op=op+pr
- 21070 if op>ps(sp-1) then pv$=vr$:             goto 21210
- 21080 tp$=op$:tr=op
- 21090 rem
- 21100 gosub 22000:v1$=vr$:n1$=nt$
- 21110 if v1$="t+" then ms=ms-1:v1$="var(" + str$(mb) + "," + str$(ms) + ")"
- 21120 if op$="+" then 41000
- 21130 if op$="-" then 42000
- 21140 if op$="*" then 43000
- 21150 if op$="/" then 44000
- 21160 if op$="^" then 45000
- 21165 if op$="=" then 46000
- 21170 l=21170:er=3:gosub 60000:return
- 21180 v2$="t"
- 21190 if sp=1 then 21200
- 21195 if tr<=ps(sp-1) then 21100
- 21200 op$=tp$:op=tr
- 21210 if vs$(sp-1)<>"t" then 21220
- 21212 vs$(sp-1)="t+"
- 21214 l$="var(" + str$(mb) + "," + str$(ms) + ")=t" :gosub 23000
- 21216 ms=ms+1 :if ms>mm then mm=ms
- 21220 vs$(sp)=v2$
- 21225 os$(sp)=op$
- 21230 ps(sp)=op
- 21235 ts$(sp)=n2$
- 21240 sp=sp+1
- 21250 if sp>ss then er=10:l=21250:gosub        60000:return
- 21260 return
- 21270 :
- 22000 rem pull stuff
- 22010 sp=sp-1
- 22020 vr$=vs$(sp)
- 22030 op$=os$(sp)
- 22040 op =pr(sp)
- 22045 nt$=ts$(sp)
- 22050 return
- 22060 :
- 22070 :
- 23000 rem generate next line number
- 23001 rem  and send line to devices
- 23010 pl=pl+10
- 23020 print pl;l$;tab(25)n1$;tab(32)n2$
- 23030 if do=1 then print#8,pl;l$
- 23040 if po=1 then print#4,pl;l$
- 23050 return
- 23998 :
- 23999 :
- 24000 rem find the location for a word
- 24010 rem  w$=word to find
- 24020 rem  wl% is loc; d%=-1,0,1 -> which
- 24030 rem  side of wl% to go to
- 24040 rem p=1024 to 1030:poke p,32:next:p=1023
- 24050 wl%=nw/2:lo%=0:hi%=nw
- 24060 p=p+1:rem  p,46
- 24070 if w$<w$(wl%) then hi%=wl%:wl%=(wl%+lo%)/2:goto 24100
- 24080 if w$>w$(wl%) then lo%=wl%:wl%=(wl%+hi%)/2+.5:goto 24100
- 24090 goto 24110
- 24100 if hi%-lo%>1 then 24060
- 24110 d%=0
- 24120 if w$>w$(wl%) then d%=1
- 24130 if w$<w$(wl%) then d%=-1
- 24135 print "("wl%;d%")"
- 24140 return
- 24999 :
- 25000 rem insert a space in word list
- 25010 if nw=50 then print"word overflow!":return
- 25020 nw=nw+1:for ii=nw-1 to wl% step -1
- 25030 w$(ii+1)=w$(ii)
- 25040 b(ii+1)=b(ii):n(ii+1)=n(ii):next
- 25050 return
- 25999 :
- 26000 rem open a bank
- 26005 er=0
- 26010 if nb=0 then b=0:goto 26050
- 26020 for b=0 to nb-1
- 26030 if ty$=bt$(b) then 26060
- 26040 next
- 26045 if b>bs then er=15:l=26045:              gosub 60000:goto 27070
- 26050 bt$(b)=ty$:nb=nb+1:goto 26070
- 26060 ty$=bt$(b)
- 26070 return
- 26999 :
- 27000 rem insertion sort one word (w$)         into bank b
- 27005 er=0
- 27010 print w$;" ";
- 27020 gosub 24000:rem find pos
- 27030 if d%=0 then er=14:l=27030:gosub 60000:goto 27070
- 27040 if d%=1 then wl%=wl%+1
- 27050 gosub 25000:w$(wl%)=w$:b(wl%)=b:n(wl%)=nn(b):nn(b)=nn(b)+1
- 27060 printtab(16)"inserted as ";ty$
- 27070 return
- 27999 :
- 29980 :
- 29990 :
- 41000 l$="t="+v1$+"+"+v2$:gosub 23000
- 41900 goto 21180
- 41998 :
- 41999 :
- 42000 l$="t="+v1$+"-"+v2$:gosub 23000
- 42900 goto 21180
- 42998 :
- 42999 :
- 43000 l$="t="+v1$+"*"+v2$:gosub 23000
- 43900 goto 21180
- 43998 :
- 43999 :
- 44000 l$="t="+v1$+"/"+v2$:gosub 23000
- 44900 goto 21180
- 44998 :
- 44999 :
- 45000 l$="t="+v1$+"^"+v2$:gosub 23000
- 45900 goto 21180
- 45998 :
- 45999 :
- 46000 if left$(n1$,1)<>"*" then er=17:l= 46000:goto 60000 :rem assign to const
- 46010 l$=v1$+"="+v2$:gosub 23000
- 46900 goto 21180
- 46998 :
- 46999 :
- 50000 rem dimension arrays used
- 50010 ss=100:dim vs$(ss),os$(ss),ps(ss),       ts$(ss)
- 50015 rem stack: var,op,priority,type
- 50020 ps(0)=0:rem force finish a line
- 50030 :
- 50040 dim an$(20),ad(20),at$(20),al(20):       rem ary name,dim,type,loc
- 50050 ts=20:dim w$(ts),b(ts),n(ts):            rem tokens: words,bank #,elem #
- 50060 nw=0:rem total number of tokens
- 50070 bs=5:dim bt$(bs),nn(bs):                 rem banks: type, # of elem
- 50080 nb=0:rem number of banks
- 50090 dim param$(bs,ts,5):rem params for       everything
- 50092 rem  vars:mem loc
- 50100 cm$="":dim cm(20):rem tokenized          command line
- 50900 rem er$(ne):rem errors
- 50990 return
- 50998 :
- 50999 :
- 59997 :
- 59998 :
- 59999 rem report errors
- 60000 if pe=0 then return
- 60010 if er<1 or er>ne then print"bad error # ("er") in"l:return
- 60020 if ptr>0 then print " {left}"tab(ptr-1);"^ ("c$")";
- 60030 print
- 60040 print "error in line"l"{left}:":printer$(er)
- 60050 return
- 60098 :
- 60099 :
- 61000 for i=1 to 10
- 61001 printvs$(i),os$(i),ps(i):next:end
- 63000 rem all data used in this program
- 63010 rem  because of no restore # cmd
- 63020 :
- 63500 rem errors-for ln 40
- 63510 data 17,missing var,early end of line,syntax,too many '='
- 63520 data illegal self operator,equation left of '=',illegal op this side of '='
- 63530 data illegal variable name,divide by 0,stack overflow,undefined variable
- 63540 data too many close parenthesis,unknown var type,var already exists
- 63550 data too many banks,too many tokens in this bank,assignment to a constant
+ 20000 ptr=0:part=1:sp=1:er=0:pe=1             :ms=0
+ 20010 :
+ 20020 rem get next char
+ 20030 ptr=ptr+1
+ 20040 c$=mid$(f$,ptr,1)
+ 20050 if c$=" " then 20020
+ 20060 if c$="{arrow left}" then op$=c$:                   gosub 31000:return
+ 20070 if c$<"0" or c$>"9" then 20110
+ 20080 : if part=1 then part=2:goto 30000        :rem extract #
+ 20090 : if part=2 then op$="*":gosub 31000      :goto 30000:rem implied *
+ 20100 :
+ 20110 if c$<"a" or c$>"z" then 20170
+ 20120 : if part=2 then op$="*":gosub 31000      :rem implied mult
+ 20130 : part=2
+ 20140 : gosub 30200 :if er<>0 then return       :rem extract a var
+ 20150 : goto 20020
+ 20160 :
+ 20170 if c$<>"+"and c$<>"*"and c$<>"/"and c$<>"^"and c$<>"="andc$<>","then 20210
+ 20180 : if part=1 then er=1:l=20180:gosub        45010:return:rem var needed
+ 20190 : if part=2 then op$=c$:gosub 31000       :part=1:goto 20020
+ 20200 :
+ 20210 if c$<>"-" then 20250
+ 20220 : if part=2 then op$="-":gosub 31000       :part=1:goto 20020
+ 20230 : op$="{sh asterisk}":gosub 31000:goto 20020
+ 20240 :
+ 20250 if c$<>"(" then 20290
+ 20260 : if part=1 then pr=pr+10:goto 20020
+ 20270 : if part=2 then op$="*":gosub 31000       :pr=pr+10:part=1:goto 20020
+ 20280 :
+ 20290 if c$<>")" then 20350
+ 20300 : if part=1 then er=1:l=20300:gosub        45010:return
+ 20310 : rem else ...
+ 20320 :  if pr>10 then pr=pr-10
+ 20330 :  goto 20020
+ 20340 :
+ 20350 rem anything else to process?
+ 20360 :
+ 20370 rem what's this char?
+ 20380 er=3:l=20380:gosub 45010:return
+ 20390 :
+ 20400 :
+ 20410 :
+ 22000 l$="t="+v1$+"+"+v2$:gosub 33000
+ 22001 goto 31210
+ 22002 :
+ 22003 :
+ 23000 l$="t="+v1$+"-"+v2$:gosub 33000
+ 23001 goto 31210
+ 23002 :
+ 23003 :
+ 24000 l$="t="+v1$+"*"+v2$:gosub 33000
+ 24001 goto 31210
+ 24002 :
+ 24003 :
+ 25000 l$="t="+v1$+"/"+v2$:gosub 33000
+ 25001 goto 31210
+ 25002 :
+ 25003 :
+ 26000 l$="t="+v1$+"^"+v2$:gosub 33000
+ 26001 goto 31210
+ 26002 :
+ 26003 :
+ 27000 if left$(n1$,1)<>"*" then er=17:l= 27000:goto 45010 :rem assign to const
+ 27001 l$=v1$+"="+v2$:gosub 33000
+ 27002 goto 31210
+ 27003 :
+ 27004 :
+ 30000 rem extract constant
+ 30010 vr$=c$:pd=0:ee=0:nt$="i"
+ 30020 ptr=ptr+1:c$=mid$(f$,ptr,1)
+ 30030 if c$="{arrow left}" then 30120
+ 30040 if c$=" " then 30120
+ 30050 if c$>="0" and c$<="9" then              vr$=vr$+c$:goto 30020
+ 30060 if c$<>"." then 30090
+ 30070 : if pd=1 then 30120
+ 30080 : pd=1:vr$=vr$+c$:goto 30020
+ 30090 if c$<>"e" then 30120
+ 30100 : if ee=1 then 30120
+ 30110 : ee=1:vr$=vr$+c$:goto 30020
+ 30120 ptr=ptr-1:goto 20020
+ 30130 :
+ 30140 :
+ 30200 rem extract variable
+ 30210 :
+ 30220 er=0 : w$=c$
+ 30230 ptr=ptr+1 : c$=mid$(f$,ptr,1)
+ 30240 if c$<"0" or (c$>"9" and c$<"a") or c$>"z" and c$<>"." then 30270
+ 30250 w$=w$+c$ : goto 30230
+ 30260 :
+ 30270 ptr=ptr-1
+ 30280 gosub 34000
+ 30290 if d%<>0 then er=11:l=30290              :goto 45010 :rem undef'd var
+ 30300 vr$="var(" + str$(b(wl%)) + "," +  str$(n(wl%)) + ")"
+ 30310 nt$=bt$(b(wl%))
+ 30320 return
+ 30330 :
+ 30340 :
+ 31000 rem push var,op,priority
+ 31005 print "push & eval:"
+ 31010 v2$=vr$:n2$=nt$
+ 31020 op=5    :rem if op$ is a func
+ 31030 if op$="{arrow left}" then op=0:pr=0                :rem force end of expression
+ 31040 if op$="=" then op=1
+ 31050 if op$="+" or op$="-" then op=2
+ 31060 if op$="*" or op$="/" then op=3
+ 31070 if op$="^" then op=4
+ 31080 op=op+pr
+ 31090 if op>ps(sp-1) then pv$=vr$:             goto 31250
+ 31100 tp$=op$:tr=op
+ 31110 :
+ 31120 print "-eval"
+ 31125 gosub 32000:v1$=vr$:n1$=nt$
+ 31130 if v1$="t+" then ms=ms-1:v1$="var(" + str$(mb) + "," + str$(ms) + ")"
+ 31140 if op$="+" then 22000
+ 31150 if op$="-" then 23000
+ 31160 if op$="*" then 24000
+ 31170 if op$="/" then 25000
+ 31180 if op$="^" then 26000
+ 31190 if op$="=" then 27000
+ 31200 l=31200:er=3:gosub 45010:return
+ 31210 v2$="t"
+ 31220 if sp=1 then 31240
+ 31230 if tr<=ps(sp-1) then 31120
+ 31240 op$=tp$:op=tr
+ 31250 if vs$(sp-1)<>"t" then 31290
+ 31260 vs$(sp-1)="t+"
+ 31270 l$="var(" + str$(mb) + "," + str$(ms) + ")=t" :gosub 33000
+ 31280 ms=ms+1 :if ms>mm then mm=ms
+ 31290 print "-push into"sp
+ 31295 vs$(sp)=v2$
+ 31300 os$(sp)=op$
+ 31310 ps(sp)=op
+ 31320 ts$(sp)=n2$
+ 31330 sp=sp+1
+ 31340 if sp>ss then er=10:l=31340:gosub        45010:return
+ 31350 return
+ 31360 :
+ 32000 rem pop stuff
+ 32010 sp=sp-1
+ 32015 print "pop from"sp
+ 32020 vr$=vs$(sp)
+ 32030 op$=os$(sp)
+ 32040 op =pr(sp)
+ 32050 nt$=ts$(sp)
+ 32060 return
+ 32070 :
+ 32080 :
+ 33000 rem generate next line number
+ 33010 rem  and send line to devices
+ 33020 pl=pl+10
+ 33030 print pl;l$;tab(25)n1$;tab(32)n2$
+ 33040 if do=1 then print#8,pl;l$
+ 33050 if po=1 then print#4,pl;l$
+ 33060 return
+ 33070 :
+ 33080 :
+ 34000 rem find the location for a word
+ 34010 rem  w$=word to find
+ 34020 rem  wl% is loc; d%=-1,0,1 -> which
+ 34030 rem  side of wl% to go to
+ 34040 rem p=1024 to 1030:poke p,32:next:p=1023
+ 34050 wl%=nw/2:lo%=0:hi%=nw
+ 34060 p=p+1:rem  p,46
+ 34070 if w$<w$(wl%) then hi%=wl%:wl%=(wl%+lo%)/2:goto 34100
+ 34080 if w$>w$(wl%) then lo%=wl%:wl%=(wl%+hi%)/2+.5:goto 34100
+ 34090 goto 34110
+ 34100 if hi%-lo%>1 then 34060
+ 34110 d%=0
+ 34120 if w$>w$(wl%) then d%=1
+ 34130 if w$<w$(wl%) then d%=-1
+ 34140 print "("wl%;d%")"
+ 34150 return
+ 34160 :
+ 35000 rem insert a space in word list
+ 35010 if nw=50 then print"word overflow!":return
+ 35020 nw=nw+1:for ii=nw-1 to wl% step -1
+ 35030 w$(ii+1)=w$(ii)
+ 35040 b(ii+1)=b(ii):n(ii+1)=n(ii):next
+ 35050 return
+ 35060 :
+ 36000 rem open a bank
+ 36010 er=0
+ 36020 if nb=0 then b=0:goto 36070
+ 36030 for b=0 to nb-1
+ 36040 if ty$=bt$(b) then 36080
+ 36050 next
+ 36060 if b>bs then er=15:l=36060:              gosub 45010:goto 37080
+ 36070 bt$(b)=ty$:nb=nb+1:goto 36090
+ 36080 ty$=bt$(b)
+ 36090 return
+ 36100 :
+ 37000 rem insertion sort one word (w$)         into bank b
+ 37010 er=0
+ 37020 print w$;" ";
+ 37030 gosub 34000:rem find pos
+ 37040 if d%=0 then er=14:l=37040:gosub         45010:goto 37080
+ 37050 if d%=1 then wl%=wl%+1
+ 37060 gosub 35000:w$(wl%)=w$:b(wl%)=b:n(wl%)=nn(b):nn(b)=nn(b)+1
+ 37070 printtab(16)"inserted as ";ty$
+ 37080 return
+ 37090 :
+ 39980 :
+ 39990 :
+ 40000 rem dimension arrays used
+ 40010 ss=100:dim vs$(ss),os$(ss),ps(ss),       ts$(ss)
+ 40020 rem stack: var,op,priority,type
+ 40030 ps(0)=0:rem force finish a line
+ 40040 :
+ 40050 dim an$(20),ad(20),at$(20),al(20):       rem ary name,dim,type,loc
+ 40060 ts=20:dim w$(ts),b(ts),n(ts):            rem tokens: words,bank #,elem #
+ 40070 nw=0:rem total number of tokens
+ 40080 bs=5:dim bt$(bs),nn(bs):                 rem banks: type, # of elem
+ 40090 nb=0:rem number of banks
+ 40100 dim param$(bs,ts,5):rem params for       everything
+ 40110 rem  vars:mem loc
+ 40120 cm$="":dim cm(20):rem tokenized          command line
+ 40130 rem er$(ne):rem errors
+ 40140 return
+ 40150 :
+ 40160 :
+ 40170 :
+ 40180 :
+ 42000 for i=1 to 10
+ 42001 printvs$(i),os$(i),ps(i):next:end
+ 42002 rem all data used in this program
+ 42003 rem  because of no restore # cmd
+ 42004 :
+ 42005 rem errors-for ln 40
+ 42006 data 17,missing var,early end of line,syntax,too many '='
+ 42007 data illegal self operator,equation left of '=',illegal op this side of '='
+ 42008 data illegal variable name,divide by 0,stack overflow,undefined variable
+ 42009 data too many close parenthesis,unknown var type,var already exists
+ 42010 data too many banks,too many tokens in this bank,assignment to a constant
+ 45000 rem report errors
+ 45010 if pe=0 then return
+ 45020 if er<1 or er>ne then print"bad error # ("er") in"l:return
+ 45030 if ptr>0 then print " {left}"tab(ptr+1);"^ ("c$")";
+ 45040 print
+ 45050 print "error in line"l"{left}:":printer$(er)
+ 45060 return
+ 45070 :
+ 45080 :
