@@ -1,4 +1,4 @@
-!- compiler.4
+!- compiler.5
    10 print"{down}piler.com{down}"
    20 dim w$(10),ml$(10),pt$(10)
    30 nw=0
@@ -138,3 +138,100 @@
  12934 print
  12940 return
  12999 :
+ 49990 :
+ 49991 :
+ 49992 :
+ 49993 :
+ 49994 rem fig linker
+ 49995 :
+ 50000 f$="linktest":input "file to link (must end in '.obj') [linktest.obj]";f$
+ 50010 if right$(f$,4) <> ".obj" then i$=f$+".obj": else i$=f$:                       f$=left$(i$,len(i$)-4)
+ 50020 o$=f$+".ml":print "executable name [";o$;"]";:input o$
+ 50025 print "- in ";i$;" and out ";o$
+ 50030 :
+ 50040 rem --- general inits ---
+ 50050 z$=chr$(0)
+ 50060 dim sv(100) : rem symbol values
+ 50070 dim st$(63),sa(63),ss(63) : rem segment titles, addresses, sizes
+ 50080 :
+ 50090 :
+ 50100 :
+ 50110 :
+ 50120 rem --- pass 1 ---
+ 50130 open 2,8,2,i$:if ds <> 0 then printds$:goto 59000
+ 50140 :
+ 50150 rem --- pass 1 inits ---
+ 50160 ps = 1 : rem pass #
+ 50170 :
+ 50180 get#2,c$:h=asc(c$+z$) :s2=st : rem chunk header
+ 50190 if (h and 192) = 0   then gosub 51000 : rem just data
+ 50200 if (h and 192) = 64  then gosub 52000 : rem seg title
+ 50210 if (h and 192) = 128 then gosub 53000 : rem error!
+ 50215 goto 50260
+ 50220 :
+ 50230 rem --- command handler ---
+ 50240 h = h and 63
+ 50250 on h gosub 54000,54100
+ 50260 if s2 = 0 then 50180
+ 50270 :
+ 50280 goto 59000
+ 50998 :
+ 50999 :
+ 51000 rem handle just data
+ 51005 print "data: ";
+ 51010 s=h and 63
+ 51020 gosub 60000
+ 51025 print b;" bytes into segment";s
+ 51030 ss(s) = ss(s) + b
+ 51040 if ps > 1 then 51500
+ 51050 for i=1 to b  : rem skip the data
+ 51060 get#2,c$:next
+ 51070 return
+ 51498 :
+ 51499 rem tranfer data to executable
+ 51500 return
+ 51998 :
+ 51999 :
+ 52000 rem title of a segment
+ 52010 s=h and 63
+ 52015 print "title of segment";s;" is: ";
+ 52020 t$=""
+ 52030 get#2,c$:if c$<>"" then t$=t$+c$:print c$;:goto 52030
+ 52035 print
+ 52040 if ps > 1 then return
+ 52050 st$(s) = t$
+ 52060 return
+ 52998 :
+ 52999 :
+ 53000 rem unused command
+ 53010 print "nonsense command ("h") in file!"
+ 53020 goto 59000
+ 53998 :
+ 53999 :
+ 54000 rem define symbol
+ 54010 gosub 60100 : s=b
+ 54020 gosub 60100
+ 54030 sv(s) = b
+ 54040 return
+ 54099 :
+ 54100 rem force segment address
+ 54110 gosub 60000 : g = b
+ 54120 gosub 60100
+ 54130 sa(g) = b
+ 54140 return
+ 54199 :
+ 59000 print "all done"
+ 59010 close 4:close 2
+ 59020 end
+ 59030 :
+ 60000 rem get next byte into c1$, b = value
+ 60010 get#2,c1$ : c1$=left$(c1$+z$,1)
+ 60020 b = asc(c1$)
+ 60030 return
+ 60099 :
+ 60100 rem get next 2 bytes into c1$,c2$ (in that order) b = lo/hi value
+ 60110 get#2,c1$,c2$
+ 60120 c1$=left$(c1$+z$,1) : c2$=left$(c2$+z$,1)
+ 60130 b=asc(c2$) * 256 + asc(c1$)
+ 60140 return
+ 60199 :
