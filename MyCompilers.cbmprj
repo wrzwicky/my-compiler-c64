@@ -45,7 +45,7 @@
         <PostBuildCommands />
     </BuildEvents>
     <BuildList />
-    <DetermineBuildOrder>1</DetermineBuildOrder>
+    <DetermineBuildOrder>0</DetermineBuildOrder>
     <PaddingByte>0</PaddingByte>
     <!--Screen designer settings-->
     <AssyBinaryFileLocation />

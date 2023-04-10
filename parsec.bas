@@ -1,10 +1,10 @@
-!- parsec2.01
-!- edit docs
-!- = not implemented
-    0 rem parsec2.00, 11 july 1990
-    1 rem  by billy zwicky
+!- parsec2.02
+!- implement =, error on assign to constant
+!- parens don't work
+    0 rem parsec2.02, 8 sep 1990
+    1 rem  by bill zwicky
     9 :
-   10 print "{white}{clear}{down}{down}welcome to zparser compiler, v2.00{down}"
+   10 print "{white}{clear}{down}{down}welcome to zparser compiler, v2.01{down}"
    15 do=0:po=0:rem no device output
    20 gosub 50000:rem init arrays
    30 rem (init tokens)
@@ -14,8 +14,13 @@
    55 rem * data is at ln 63500
    59 :
    80 pe=1:rem print all errors
-   90 :
-   95 print "{down}ready for formulae."
+   82 :
+   89 rem open bank for exp. eval. stack
+   90 ty$="math.stack":gosub 26000
+   92 if er<>0 then print "can't open system stack!" :goto 9000
+   94 mb=b :rem record bank for math stack
+   96 :
+   98 print "{down}ready for formulae."
   100 print "{down}ok."
   110 f$=""
   120 sys 65487:if peek(780)=13 then 135
@@ -62,7 +67,7 @@
   430 : n$=mid$(f$,i+1,len(f$)-i-1)
   440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34):do=1:open 8,8,2
   450 : pl=0
-  460 : l$="dim var(100)":gosub 23000
+  460 : l$="dim var("+str$(bs)+",100)":gosub 23000
   470 : goto 100
   480 :
   490 if left$(f$,4)<>"prin" then 900
@@ -76,7 +81,7 @@
  9970 :
  9980 :
  9990 :
- 10000 ptr=0:part=1:sp=1:er=0:pe=1             :es=nv+1
+ 10000 ptr=0:part=1:sp=1:er=0:pe=1             :ms=0
  10050 :
  10060 rem get next char
  10070 ptr=ptr+1
@@ -88,8 +93,10 @@
  10110 : if part=2 then op$="*":gosub 21000      :goto 20000:rem implied *
  10120 :
  10130 if c$<"a" or c$>"z" then 10170
- 10140 : if part=1 then part=2:gosub 20200       :goto 10060:rem extract var
- 10150 : if part=2 then op$="*":gosub 21000 :gosub 20200:goto 10060:rem implied *
+ 10140 : if part=2 then op$="*":gosub 21000      :rem implied mult
+ 10145 : part=2
+ 10150 : gosub 20200 :if er<>0 then return       :rem extract a var
+ 10155 : goto 10060
  10160 :
  10170 if c$<>"+"and c$<>"*"and c$<>"/"and c$<>"^"and c$<>"="andc$<>","then 10210
  10180 : if part=1 then er=1:l=10180:gosub        60000:return:rem var needed
@@ -105,7 +112,9 @@
  10330 :
  10340 if c$<>")" then 10380
  10350 : if part=1 then er=1:l=10350:gosub        60000:return
- 10360 : if part=2 then pr=pr-10:goto 10060
+ 10355 : rem else ...
+ 10360 :  if pr>10 then pr=pr-10
+ 10365 :  goto 10060
  10370 :
  10380 rem anything else to process?
  10510 :
@@ -115,7 +124,7 @@
  19980 :
  19990 :
  20000 rem extract constant
- 20010 vr$=c$:pd=0:ee=0
+ 20010 vr$=c$:pd=0:ee=0:nt$="i"
  20020 ptr=ptr+1:c$=mid$(f$,ptr,1)
  20030 if c$="{arrow left}" then 20120
  20040 if c$=" " then 20120
@@ -131,21 +140,23 @@
  20140 :
  20200 rem extract variable
  20210 :
- 20220 w$=c$
- 20230 ptr=ptr+1:c$=mid$(f$,ptr,1)
+ 20220 er=0 : w$=c$
+ 20230 ptr=ptr+1 : c$=mid$(f$,ptr,1)
  20260 if c$<"0" or (c$>"9" and c$<"a") or c$>"z" and c$<>"." then 20300
- 20280 w$=w$+c$:goto 20230
+ 20280 w$=w$+c$ : goto 20230
  20290 :
  20300 ptr=ptr-1
  20310 gosub 24000
- 20320 if d%=0 then vr$="var("+str$(wl%)+")"    :nt$=bt$(b(wl%)):return
- 20390 er=11:l=20200:return:rem undef'd var
+ 20320 if d%<>0 then er=11:l=20200              :goto 60000 :rem undef'd var
+ 20330 vr$="var(" + str$(b(wl%)) + "," +  str$(n(wl%)) + ")"
+ 20340 nt$=bt$(b(wl%))
+ 20350 return
  20498 :
  20499 :
  21000 rem push var,op,priority
  21005 v2$=vr$:n2$=nt$
  21010 op=5    :rem if op$ is a func
- 21020 if op$="{arrow left}" then op=0
+ 21020 if op$="{arrow left}" then op=0:pr=0                :rem force end of expression
  21030 if op$="=" then op=1
  21040 if op$="+" or op$="-" then op=2
  21050 if op$="*" or op$="/" then op=3
@@ -155,12 +166,13 @@
  21080 tp$=op$:tr=op
  21090 rem
  21100 gosub 22000:v1$=vr$:n1$=nt$
- 21110 if v1$="t+" then es=es-1:v1$="var("+str$(es)+")"
+ 21110 if v1$="t+" then ms=ms-1:v1$="var(" + str$(mb) + "," + str$(ms) + ")"
  21120 if op$="+" then 41000
  21130 if op$="-" then 42000
  21140 if op$="*" then 43000
  21150 if op$="/" then 44000
  21160 if op$="^" then 45000
+ 21165 if op$="=" then 46000
  21170 l=21170:er=3:gosub 60000:return
  21180 v2$="t"
  21190 if sp=1 then 21200
@@ -168,7 +180,8 @@
  21200 op$=tp$:op=tr
  21210 if vs$(sp-1)<>"t" then 21220
  21212 vs$(sp-1)="t+"
- 21214 l$="var("+str$(es)+")=t":gosub23000:es=es+1
+ 21214 l$="var(" + str$(mb) + "," + str$(ms) + ")=t" :gosub 23000
+ 21216 ms=ms+1 :if ms>mm then mm=ms
  21220 vs$(sp)=v2$
  21225 os$(sp)=op$
  21230 ps(sp)=op
@@ -209,7 +222,7 @@
  24110 d%=0
  24120 if w$>w$(wl%) then d%=1
  24130 if w$<w$(wl%) then d%=-1
- 24135 printwl%;d%;
+ 24135 print "("wl%;d%")"
  24140 return
  24999 :
  25000 rem insert a space in word list
@@ -260,6 +273,13 @@
  44999 :
  45000 l$="t="+v1$+"^"+v2$:gosub 23000
  45900 goto 21180
+ 45998 :
+ 45999 :
+ 46000 if left$(n1$,1)<>"*" then er=17:l= 46000:goto 60000 :rem assign to const
+ 46010 l$=v1$+"="+v2$:gosub 23000
+ 46900 goto 21180
+ 46998 :
+ 46999 :
  50000 rem dimension arrays used
  50010 ss=100:dim vs$(ss),os$(ss),ps(ss),       ts$(ss)
  50015 rem stack: var,op,priority,type
@@ -284,7 +304,7 @@
  60010 if er<1 or er>ne then print"bad error # ("er") in"l:return
  60020 if ptr>0 then print " {left}"tab(ptr-1);"^ ("c$")";
  60030 print
- 60040 print "error in line"l":":printer$(er)
+ 60040 print "error in line"l"{left}:":printer$(er)
  60050 return
  60098 :
  60099 :
@@ -294,8 +314,8 @@
  63010 rem  because of no restore # cmd
  63020 :
  63500 rem errors-for ln 40
- 63510 data 16,missing var,early end of line,syntax,too many '='
+ 63510 data 17,missing var,early end of line,syntax,too many '='
  63520 data illegal self operator,equation left of '=',illegal op this side of '='
  63530 data illegal variable name,divide by 0,stack overflow,undefined variable
  63540 data too many close parenthesis,unknown var type,var already exists
- 63550 data too many banks,too many tokens in this bank
+ 63550 data too many banks,too many tokens in this bank,assignment to a constant
