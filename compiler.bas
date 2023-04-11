@@ -1,24 +1,22 @@
-!- compiler.8.2.4 - tweaks, ml output corrupted
+!- compiler.8.2.5
 !- run for test; run 1000 for compiler; run 50000 for linker
-0 rem compiler.8.2.4, 11 sep 1991
+0 rem compiler.8.2.5, 12 oct 1991
 1 rem  by bill zwicky
-2 rem -contains parsec 2.02 and
-3 rem  compiler 8.0
-4 rem -compiler is to use parsec's
-5 rem  token routines.
+2 rem -contains parsec 2.02 and compiler 8.0
+3 rem -compiler uses parsec's token routines
 9 :
-10 print "{clear}{down*2}welcome to z compiler, v8.0{down}"
+10 print "{clear}{down*2}welcome to z compiler, v8.2{down}"
 15 fo=0:po=0:rem no device output
 20 gosub 30000:rem init arrays
 30 rem (init tokens)
-32 goto 1000    :rem run compiler
 38 :
 39 restore 39120
 40 read ne:dim em$(ne):for i=1 to ne
 50 read em$(i):next
-55 rem * data is at ln 63500
+52 :
+55 pe=1:rem print all errors
 59 :
-80 pe=1:rem print all errors
+80 goto 1000    :rem run compiler
 82 :
 85 ty$="code" : gosub 26000 : sc$=chr$(64+b)     :rem select and name code seg
 87 :
@@ -97,6 +95,7 @@
 1030 of=2:open of,8,3,f$+".obj,u,w"
 1040 ty$="code" : gosub 26000 : sc$=chr$(64+b) :rem select and name code seg
 1045 ty$="math.stack" : gosub 26000 : mb=b     :rem select and name math stack
+1046 w$="math.space"  : gosub 27000            :rem def sym for stack
 1047 gosub 5000         :rem build function segment
 1050 :
 1060 cs = -1 :rem current segment
@@ -114,8 +113,9 @@
 1200 s=0 : m$ = chr$(96)
 1210 gosub 34040
 1899 :
-1900 close of:close 1
-1910 end
+1900 print "{down}{reverse on}W compiler is done W"
+1950 close of:close 1
+1960 end
 1998 :
 1999 :
 5000 restore 6000
@@ -153,13 +153,18 @@
 9997 :
 9998 :
 9999 :
-10000 ptr=0:part=1:sp=1:en=0:pe=1:ms=0
+10000 rem compile an expression
+10002 rem   input:   f$ is string to compile
+10004 rem   output:  math stack contains result
+10018 :
+10020 ptr=0:part=1:sp=1:en=0:pe=1:ms=0
+10030 f$=f$+"{arrow left}"    :rem sentinel terminator
 10050 :
 10060 rem get next char
 10070 ptr=ptr+1
 10080 c$=mid$(f$,ptr,1)
-10082 if c$=" " then 10060
-10085 if c$="{arrow left}" then op$=c$:                   gosub 21000:return
+10082 if c$=" "  then  10060
+10085 if c$="{arrow left}"  then  op$=c$ : gosub 21000 : gs(mb)=2*gl(mb) : return
 10090 if c$<"0" or c$>"9" then 10130
 10100 : if part=1 then part=2:goto 20000        :rem extract #
 10110 : if part=2 then op$="*":gosub 21000      :goto 20000:rem implied *
@@ -259,6 +264,7 @@
 21110 if v1$="t+" then ms=ms-1:v1$=chr$(mb) + chr$(ms)
 21114 rem define accumulator t
 21115 vt$=chr$(mb)+chr$(ms)
+21117 ty$="code" : gosub 26000
 21120 if op$="+" then 41000
 21130 if op$="-" then 42000
 21140 if op$="*" then 43000
@@ -275,10 +281,11 @@
 21212 vs$(sp-1)="t+"
 21213 rem actual pushes not needed; t is now top of stack
 21214 rem l$="var(" + str$(mb) + "," + str$(ms) + ")=t" :gosub 23000
-21216 ms=ms+1 :if ms>mm then mm=ms
+21216 ms=ms+1 :if ms>mm then print "math.stack overflow!!" : return
+21218 if ms>gl(mb) then gl(mb)=ms :rem check size of bank
 21220 vs$(sp)=v2$
 21225 os$(sp)=op$
-21228 if op$=";" then op=-1+pr     :rem stop further ops from getting past here
+21228 if op$=";" then op=-1+pr    :rem stop further ops from getting past here
 21230 ps(sp)=op
 21235 ts$(sp)=n2$
 21240 sp=sp+1
@@ -297,7 +304,7 @@
 23000 rem write linker data
 23001 rem   l$ = data to write
 23010 :
-23020 pl=pl+1 :print pl;"< data ";
+23020 print "< data ";
 23030 rem i=1 to len(l$):printright$(hex$(asc(mid$(l$,i,1))),2)" ";:next
 23040 print ">";tab(55)n1$;tab(67)n2$
 23050 if of<>0 then print#of,l$;
@@ -328,11 +335,13 @@
 25040 b(ii+1)=b(ii):n(ii+1)=n(ii):dr(ii+1)=dr(ii):next
 25050 return
 25999 :
-26000 rem open a bank and select it
+26000 rem open a bank (segment) and select it
 26005 en=0
 26010 if nb=0 then b=0:goto 26050
 26020 for b=0 to nb-1
-26030 : if ty$=bt$(b) then print "<<select bank:";b;">>":l$=chr$(64+b):goto 26070
+26025 rem hunt for bank; if not found, select it only if not currently sel'd
+26027 rem   else create new bank
+26030 : if ty$=bt$(b) then begin : print "<<select bank:";b;">>":l$=chr$(64+b):         if cs <> b then cs=b:goto 26070 : else goto 26080 : bend
 26040 : next
 26042 rem create new bank, if space permits
 26045 if b>bs then en=15:l=26045:              gosub 39000:goto 27070
@@ -378,35 +387,36 @@
 31000 rem compile parameters
 31010 rem  wl% = index of parameter template (word number)
 31020 rem  p$  = string to be compiled
-31030 w=dr(wl%):if dp$(w) = "" then return
-31032 print " (compile actual params)"
+31025 :
+31030 dp$=dp$(dr(wl%)):if dp$ = "" then return
+31032 print " (compile actual params: template='";dp$;"', param='";p$;"')"
 31034 f$=p$:gosub 10000:if en <> 0 then return
 31040 it=0 : m$="" : s2=0        :rem s2=sp for fetching params
 31050 print " (what var type?) ";
 31060 : s$="" : s2=s2+1
-31070 : it=it+1:v$=mid$(dp$(w), it, 1)
-31080 : it=it+1:c$=mid$(dp$(w), it, 1)
+31070 : it=it+1:v$=mid$(dp$, it, 1)
+31080 : it=it+1:c$=mid$(dp$, it, 1)
 31090 : if c$>="0" and c$<="9" then s$=s$+c$:goto 31080
 31100 : print" var type: ";v$;" - ";
 31110 :
 31120 : if v$="i" then gosub 32000:goto 31160
 31130 : if v$="s" then gosub 33000:goto 31160
-31140 : print "unknown": goto 9000
+31140 : print "unknown: "v$;c$: goto 9000
 31150 :
 31160 if it>1 and s2<sp then 31050
 31170 :
-31180 s=0 : gosub 34040 :rem select data, insert it
+31180 ty$="code" : gosub 26000 : l$=m$ :gosub 23000 :rem select cs, ins data
 31190 return
 31200 :
 32000 if s$="" then print"missing int size": goto 32500
 32010 s=val(s$):if s<1 or s>4 then print"unsupported int size":goto 32500
 32020 :
-32140 it=it+1:if mid$(dp$(w), it, 1) <> "@" then print"unknown template command":goto 32500
+32140 it=it+1:if mid$(dp$, it, 1) <> "@" then print"unknown template command":goto 32500
 32150 it=it+1
 32160 :
 32170 print " (fetch storage location) ";
 32180 l$="":lt=0 :rem lt=loc type: 0=dec ad, 1=hex ad, 2=reg
-32190 it=it+1:c$=mid$(dp$(w), it, 1)
+32190 it=it+1:c$=mid$(dp$, it, 1)
 32200 : if instr("0123456789", c$) > 0  then   l$=l$+c$:goto 32190
 32210 : if c$="$" then                         lt=1:goto 32190
 32220 : if lt=1 and instr("abcdef", c$) > 0  then l$=l$+c$:goto 32190
@@ -426,21 +436,22 @@
 32350 :
 32360 goto 32500
 32370 :
-32380 if len(l$) <> len(n$) then print "number of regs doesn't match specified int size":goto 32500
+32380 if len(l$) <> s then print "number of regs doesn't match specified int size":goto 32500
 32390 :
 32400 rem set up ld? instructions
-32410 ld(1)=169:ld(2)=162:ld(3)=160
+32410 ld(1)=173:ld(2)=174:ld(3)=172
 32420 :
 32430 print " (load reg(s)) ";
-32435 v$=vr$(s2)
+32435 v$=vs$(s2):printlen(v$);
 32440 for i=1 to len(l$)
-32450 : m$ = m$ + "{ct a}"+chr$(ld(instr("axy",mid$(l$,i,1))))                                  + chr$(226)+v$+chr$(i-1)+chr$(0)
+32450 : r$ =      "{ct a}"+chr$(ld(instr("axy",mid$(l$,i,1))))                                  + chr$(226)+v$+chr$(i-1)+chr$(0)
+32455 : m$=m$+r$:printlen(r$);
 32460 : next
 32470 :
 32480 goto 32500
 32490 :
 32500 print " (advance indices to next ';')"
-32510 it=instr(dp$(w), ";", it)
+32510 it=instr(dp$, ";", it)
 32530 :
 32550 return
 32560 :
@@ -506,6 +517,7 @@
 44999 :
 45000 rem l$=vt$+"="+v1$+"^"+v2$
 45010 l$=chr$(dec("ea")) :gosub 23000
+45190 return
 45900 goto 21180
 45998 :
 45999 :
@@ -578,7 +590,7 @@
 51010 print "data: segment"; sg; ";";
 51020 b = h and 63
 51025 print b;" bytes"
-51030 gs(sg) = gs(sg) + b
+51030 if ps = 1  then gs(sg) = gs(sg) + b
 51040 if ps = 2  and  sg = zi - 1  then 51500
 51050 for i=1 to b  : rem skip the data
 51060 : get#2,c$:next
@@ -587,7 +599,6 @@
 51499 rem tranfer data to executable (pass 2)
 51500 : for i=1 to b  :rem transfer the data
 51510 :   get#2,c$:print#3,left$(c$+z$,1);:next
-51520 : bend
 51530 return
 51998 :
 51999 :
@@ -624,18 +635,18 @@
 54128 : bend
 54130 return
 54199 :
-54200 rem put symbol in segment
+54200 rem define symbol in segment sg
 54210 gosub 60000 : s=b    :rem symbol #
 54220 gosub 60100          :rem # bytes
-54225 print "create symbol"; s; " in segment"; sg; ", offset"; gs(sg); ",";
-54227 : print b; " byte";:if b<>1 then print"s": else print
+54225 print "create symbol"; s; " in segment"; sg;
 54228 if ps=1 then begin
 54230 : if gl(sg)<=s then gl(sg)=s+1
 54232 : sl(sg, s) = gs(sg) : gs(sg) = gs(sg) + b
 54234 : bend : else begin                       :rem reserve space for var
 54236 :   if sg = zi-1 and b > 0 then  for i=1 to b:print#3,z$;:next
 54238 :   bend
-54240 return
+54240 print ", offset"; sl(sg,s); ",";b;" byte";:if b<>1 then print"s":else print
+54250 return
 54299 :
 54300 rem name segment
 54310 print "title of segment";sg;" is: ";
@@ -653,12 +664,14 @@
 55030 print "insert symbol ("; g;",";s; ") here as"; l; "bytes, ";
 55040 if d=0 then print "low"; : else print "high";
 55050 print " byte first"
+55052 :
 55055 if s>=gl(g) then print "{ct o}{space*3}*** symbol is not defined ***":return                :rem count error
+55057 if ps=1  then  gs(sg)=gs(sg)+l    :rem update seg size during pass 1
 55060 if ps=2 and sg=zi-1 then begin    :rem do the insertion if at right seg
 55062 : v=sl(g,s) + o                   :rem  (get val to ins)
 55065 : if d=1 then begin               :rem  high byte first
-55070 :   l=l-1 : d=256^int(log(v)/log(2)/8+.99)    :rem min # bytes
-55080 :   for i=l to 0 step -1
+55070 :   l=l-1 : d=256^int(log(v)/log(2)/8+.99)    :rem # bytes
+55080 :   for i=l to 0 step -1                  :rem high byte first
 55085 :     c=int(v/d) : v=v-b*d : d=d/256
 55090 :     print#3,chr$(c);
 55100 :     next
@@ -669,7 +682,7 @@
 55150 :     print#3,chr$(c);
 55160 :     next
 55170 :   bend
-55180 : bend
+55180 : bend   :rem if ps=2
 55190 return
 55998 :
 55999 :
@@ -677,7 +690,7 @@
 59010 close 2                 :rem close input file
 59015 if ps=2 then ad = ad+gs(zi-1)
 59020 next zi                 :rem repeat this pass
-59025 print "{reverse on}W{space*2}pass";ps;"{left} done W"
+59025 print "{reverse on}W{space*2}pass";ps;"{left} done{space*2}W"
 59030 if ps=2 then close 3    :rem close output file (pass 2 only)
 59040 next ps                 :rem do next pass
 59050 end
@@ -729,7 +742,7 @@
 62010 get#1,a$:printa$;:if st=0 then 62010
 62020 close 1
 62030 end
-62200 open 1,8,2,"test.ml":z$=chr$(0)
+62200 open 1,8,2,"test.obj":z$=chr$(0)
 62210 get#1,a$:printright$(hex$(asc(a$+z$)),2)", ";:if st=0 then 62210
 62220 close 1
 62230 end
