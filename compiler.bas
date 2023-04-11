@@ -1,6 +1,6 @@
-!- compiler.8.2.3
+!- compiler.8.2.4 - tweaks, ml output corrupted
 !- run for test; run 1000 for compiler; run 50000 for linker
-0 rem compiler.8.2.2, 24 jul 1991
+0 rem compiler.8.2.4, 11 sep 1991
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and
 3 rem  compiler 8.0
@@ -11,7 +11,7 @@
 15 fo=0:po=0:rem no device output
 20 gosub 30000:rem init arrays
 30 rem (init tokens)
-32 rem  1000    :rem run compiler
+32 goto 1000    :rem run compiler
 38 :
 39 restore 39120
 40 read ne:dim em$(ne):for i=1 to ne
@@ -20,6 +20,8 @@
 59 :
 80 pe=1:rem print all errors
 82 :
+85 ty$="code" : gosub 26000 : sc$=chr$(64+b)     :rem select and name code seg
+87 :
 89 rem open bank for exp. eval. stack
 90 ty$="math.stack":gosub 26000
 92 if en<>0 then print "can't open system stack!" :goto 9000
@@ -40,7 +42,7 @@
 170 : next i
 175 goto 100
 180 :
-200 if left$(f$,4)="quit" then close 8:end
+200 if left$(f$,4)="quit" then close of:close 4:end
 210 if left$(f$,4)<>"help" then 300
 220 print "available commands:"
 225 print "{space*2}decl - declare a variable"
@@ -65,8 +67,8 @@
 346 : ty$="var-"+ty$
 350 : gosub 26000:if en<>0 then 100
 355 : gosub 27000:if en<>0 then 100
-360 : rem   "variable '";vr$;"' created as ";nt$
-362 print "(create var:";195;wl%;tl;")"
+360 : rem   "variable '";vr$;"' created as ";nt$;",";tl;"bytes long."
+365 : l$=chr$(195)+chr$(wl%)+chr$(tl)+chr$(0)
 370 : goto 100
 380 :
 390 if left$(f$,4)<>"file" then 490
@@ -74,10 +76,10 @@
 410 :   if mid$(f$,i,1)<>" " then next
 420 : if i>len(f$) then en=1:l=420:ptr=i       :gosub 39000:goto 100
 430 : n$=mid$(f$,i+1,len(f$)-i-1)
-440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34):fo=1:open 8,8,2
-445 : of=8  :rem output file logical #
-450 : pl=0
-460 : l$="dim var("+str$(bs)+",100)":gosub 23000
+440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34)
+445 : of=0  :rem output file logical #
+450 : pl=0  :rem prg line #
+460 :
 470 : goto 100
 480 :
 490 if left$(f$,4)<>"prin" then 900
@@ -88,13 +90,14 @@
 899 :
 900 gosub 10000
 910 goto 100
-1000 gosub 5000
-1005 input "filename (.fig is added)? test.fig{left*10}";f$
+1000 input "filename (.fig is added)? test.fig{left*10}";f$
 1010 if right$(f$,4)=".fig" then f$=left$(f$,len(f$)-4)
 1015 scratch (f$+".obj")
 1020 open 1,8,2,f$+".fig,s,r"
 1030 of=2:open of,8,3,f$+".obj,u,w"
-1040 sc$=chr$(64) : l$=sc$+chr$(196)+"code"+chr$(0) : gosub 23000                  :rem select and name code seg
+1040 ty$="code" : gosub 26000 : sc$=chr$(64+b) :rem select and name code seg
+1045 ty$="math.stack" : gosub 26000 : mb=b     :rem select and name math stack
+1047 gosub 5000         :rem build function segment
 1050 :
 1060 cs = -1 :rem current segment
 1099 :
@@ -123,7 +126,7 @@
 5050 read v$:if v$<>"{arrow left}" then dc$(nd)=dc$(nd)+chr$(dec(v$)):goto 5050
 5060 nd=nd+1:goto 5020
 5080 return
-6000 data open,"i1 @ a,i1 @ x,i1 @ y"
+6000 data open,"i1 @ a;i1 @ x;i1 @ y"
 6005 data 20,ba,ff, a9,00,20,bd,ff
 6010 data 20,c0,ff,{arrow left}
 6020 :
@@ -167,7 +170,7 @@
 10150 : gosub 20200 :if en<>0 then return       :rem extract a var
 10155 : goto 10060
 10160 :
-10170 if c$<>"+"and c$<>"*"and c$<>"/"and c$<>"^"and c$<>"="andc$<>"#"then 10210    :rem '#' replaces ','
+10170 if c$<>"+"and c$<>"*"and c$<>"/"and c$<>"^"and c$<>"="andc$<>";"then 10210    :rem ';' replaces ','
 10180 : if part=1 then en=1:l=10180:gosub        39000:return:rem var needed
 10190 : if part=2 then op$=c$:gosub 21000       :part=1:goto 10060
 10200 :
@@ -197,16 +200,31 @@
 20020 ptr=ptr+1:c$=mid$(f$,ptr,1)
 20030 if c$="{arrow left}" then 20120
 20040 if c$=" " then 20120
-20050 if c$>="0" and c$<="9" then              vr$=vr$+c$:goto 20020
+20050 if c$>="0" and c$<="9" then vr$=vr$+c$:goto 20020
 20060 if c$<>"." then 20090
 20070 : if pd=1 then 20120
 20080 : pd=1:vr$=vr$+c$:goto 20020
 20090 if c$<>"e" then 20120
 20100 : if ee=1 then 20120
 20110 : ee=1:vr$=vr$+c$:goto 20020
-20120 ptr=ptr-1:goto 10060
-20130 :
-20140 :
+20120 ptr=ptr-1
+20125 :
+20129 rem select bank
+20130 ty$="constants" : gosub 26000
+20132 rem convert constant to 16-bit int
+20138 n=val(vr$) : n$=""
+20140 for i=1 to 2  :rem 2 can be replaced with any # bytes to generate
+20143 : n=n/256:n$=n$+chr$( (n - int(n)) * 256 + .2 ):n=int(n)
+20146 : next
+20148 :
+20149 rem generate linker codes
+20150 w=nn(b) : nn(b)=nn(b)+1 : vr$=chr$(b)+chr$(w)
+20155 l$=chr$(195)+chr$(w)+chr$(0)+chr$(0)     :rem define symbol
+20160 l$=l$+chr$(2)+n$                         :rem give it a value
+20170 gosub 23000
+20190 goto 10060
+20198 :
+20199 :
 20200 rem extract variable
 20210 :
 20220 en=0 : w$=c$
@@ -225,7 +243,7 @@
 21000 rem push var,op,priority
 21005 v2$=vr$:n2$=nt$
 21010 op=5    :rem if op$ is a func
-21020 if op$="{arrow left}" or op$="#" then op=0:pr=0      :rem force end of expression
+21020 if op$="{arrow left}" or op$=";" then op=0:pr=0      :rem force end of expression
 21030 if op$="=" then op=1
 21040 if op$="+" or op$="-" then op=2
 21050 if op$="*" or op$="/" then op=3
@@ -247,7 +265,7 @@
 21150 if op$="/" then 44000
 21160 if op$="^" then 45000
 21165 if op$="=" then 46000
-21167 if op$="#" then 21220     :rem is comma -> next part of 'tuple'
+21167 if op$=";" then 21220       :rem is comma -> next part of 'tuple'
 21170 l=21170:en=3:gosub 39000:return
 21180 v2$="t"
 21190 if sp=1 then 21200
@@ -260,6 +278,7 @@
 21216 ms=ms+1 :if ms>mm then mm=ms
 21220 vs$(sp)=v2$
 21225 os$(sp)=op$
+21228 if op$=";" then op=-1+pr     :rem stop further ops from getting past here
 21230 ps(sp)=op
 21235 ts$(sp)=n2$
 21240 sp=sp+1
@@ -275,13 +294,15 @@
 22050 return
 22060 :
 22070 :
-23000 rem generate next line number
-23001 rem  and send line to devices
-23010 pl=pl+10
-23020 print pl;"(data)";tab(40)n1$;tab(52)n2$
-23030 if fo=1 then print#of,l$;
-23040 if po=1 then print#4,l$;
-23050 return
+23000 rem write linker data
+23001 rem   l$ = data to write
+23010 :
+23020 pl=pl+1 :print pl;"< data ";
+23030 rem i=1 to len(l$):printright$(hex$(asc(mid$(l$,i,1))),2)" ";:next
+23040 print ">";tab(55)n1$;tab(67)n2$
+23050 if of<>0 then print#of,l$;
+23060 if po=1 then print#4,l$;
+23070 return
 23998 :
 23999 :
 24000 rem find the location for a word
@@ -311,13 +332,15 @@
 26005 en=0
 26010 if nb=0 then b=0:goto 26050
 26020 for b=0 to nb-1
-26030 : if ty$=bt$(b) then print "<<select bank:";64+b;")":return
+26030 : if ty$=bt$(b) then print "<<select bank:";b;">>":l$=chr$(64+b):goto 26070
 26040 : next
 26042 rem create new bank, if space permits
 26045 if b>bs then en=15:l=26045:              gosub 39000:goto 27070
 26050 nb=nb+1 : bt$(b)=ty$ : tl(b)=tl
-26060 print "<<new bank:";64+b;196;ty$;0;")"
-26070 return
+26055 print "<<new bank:";b;ty$;">>"
+26060 l$=chr$(64+b)+chr$(196)+ty$+chr$(0)
+26070 gosub 23000
+26080 return
 26999 :
 27000 rem insertion sort one word (w$)         into bank b
 27005 en=0
@@ -356,9 +379,11 @@
 31010 rem  wl% = index of parameter template (word number)
 31020 rem  p$  = string to be compiled
 31030 w=dr(wl%):if dp$(w) = "" then return
-31040 it=0 : ip=0 : m$=""
+31032 print " (compile actual params)"
+31034 f$=p$:gosub 10000:if en <> 0 then return
+31040 it=0 : m$="" : s2=0        :rem s2=sp for fetching params
 31050 print " (what var type?) ";
-31060 : s$=""
+31060 : s$="" : s2=s2+1
 31070 : it=it+1:v$=mid$(dp$(w), it, 1)
 31080 : it=it+1:c$=mid$(dp$(w), it, 1)
 31090 : if c$>="0" and c$<="9" then s$=s$+c$:goto 31080
@@ -368,7 +393,7 @@
 31130 : if v$="s" then gosub 33000:goto 31160
 31140 : print "unknown": goto 9000
 31150 :
-31160 if it>1 and ip>1 then 31050
+31160 if it>1 and s2<sp then 31050
 31170 :
 31180 s=0 : gosub 34040 :rem select data, insert it
 31190 return
@@ -376,17 +401,6 @@
 32000 if s$="" then print"missing int size": goto 32500
 32010 s=val(s$):if s<1 or s>4 then print"unsupported int size":goto 32500
 32020 :
-32030 n$="" : print " (fetch the number) ";
-32040 ip=ip+1:c$=mid$(p$,ip,1):if c$=" " then 32040   :rem strip leading spcs
-32050 if c$<"0" or c$>"9" then 32070
-32060 n$=n$+c$ : ip=ip+1 : c$=mid$(p$, ip, 1) : goto 32050
-32070 n=val(n$):n$=""
-32080 :
-32090 print " (convert number to int) ";
-32100 for i=1 to s
-32110 : n=n/256:n$=n$+chr$( (n - int(n)) * 256 + .2 ):n=int(n)
-32120 : next i
-32130 :
 32140 it=it+1:if mid$(dp$(w), it, 1) <> "@" then print"unknown template command":goto 32500
 32150 it=it+1
 32160 :
@@ -402,10 +416,11 @@
 32260 if lt=0 then l=val(l$)
 32270 :
 32280 print " (generate code to store the bytes) ";
+32285 v$=vs$(s2)
 32290 for i=0 to s-1
-32300 : m$ = m$ + chr$(169)+mid$(n$,i+1,1)
+32300 : m$ = m$ + "{ct a}"+chr$(dec("ad"))+chr$(226)+v$+chr$(i)+chr$(0)
 32310 : lh=int(l/256) :ll=l-lh*256
-32320 : m$ = m$ + chr$(141)+chr$(ll)+chr$(lh)
+32320 : m$ = m$ + "{ct c}"+chr$(141)+chr$(ll)+chr$(lh)
 32330 : l = l+1
 32340 : next
 32350 :
@@ -417,20 +432,21 @@
 32410 ld(1)=169:ld(2)=162:ld(3)=160
 32420 :
 32430 print " (load reg(s)) ";
+32435 v$=vr$(s2)
 32440 for i=1 to len(l$)
-32450 : m$ = m$ + chr$(ld(instr("axy",mid$(l$,i,1)))) + mid$(n$,i,1)
+32450 : m$ = m$ + "{ct a}"+chr$(ld(instr("axy",mid$(l$,i,1))))                                  + chr$(226)+v$+chr$(i-1)+chr$(0)
 32460 : next
 32470 :
 32480 goto 32500
 32490 :
-32500 print " (advance indices to next ',') ";
-32510 it=instr(dp$(w), ",", it)
-32520 ip=instr(p$, ".", ip)
+32500 print " (advance indices to next ';')"
+32510 it=instr(dp$(w), ";", it)
 32530 :
-32540 print
 32550 return
 32560 :
 33000 return :rem strings not implemented yet
+33998 :
+33999 :
 34000 rem generate 'write data' linker command
 34010 rem   s  = segment to insert data into
 34020 rem   m$ = data to write
@@ -449,8 +465,6 @@
 39050 return
 39060 :
 39070 :
-39080 rem all data used in this program
-39090 rem  because of no restore # cmd
 39100 :
 39110 rem errors-for ln 40
 39120 data 17,missing var,early end of line,syntax,too many '='
@@ -459,45 +473,48 @@
 39150 data too many close parenthesis,unknown var type,var already exists
 39160 data too many banks,too many tokens in this bank,assignment to a constant
 41000 rem generate 16 bit addition code
-41010 l$=sc$+"{ct a}"+chr$(24)+chr$(dec("ad"))+chr$(225)+v1$+chr$(0)
-41020 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(225)+v2$+chr$(0)
-41030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(225)+vt$+chr$(0)
-41040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(225)+v1$+chr$(1)
-41050 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(225)+v2$+chr$(1)
-41060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(225)+vt$+chr$(1)
+41010 l$=sc$+"{ct a}"+chr$(24)+chr$(dec("ad"))+chr$(226)+v1$+chr$(0)+chr$(0)
+41020 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$+chr$(0)+chr$(0)
+41030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(0)+chr$(0)
+41040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+v1$+chr$(1)+chr$(0)
+41050 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$+chr$(1)+chr$(0)
+41060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(1)+chr$(0)
 41100 gosub 23000
 41900 goto 21180
 41998 :
 41999 :
 42000 rem generate 16 bit subtraction code
-42010 l$=sc$+"{ct b}"+chr$(56)+chr$(dec("ad"))+chr$(225)+v1$+chr$(0)
-42020 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(225)+v2$+chr$(0)
-42030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(225)+vt$+chr$(0)
-42040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(225)+v1$+chr$(1)
-42050 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(225)+v2$+chr$(1)
-42060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(225)+vt$+chr$(1)
+42010 l$=sc$+"{ct b}"+chr$(56)+chr$(dec("ad"))+chr$(226)+v1$+chr$(0)+chr$(0)
+42020 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+v2$+chr$(0)+chr$(0)
+42030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(0)+chr$(0)
+42040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+v1$+chr$(1)+chr$(0)
+42050 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+v2$+chr$(1)+chr$(0)
+42060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(1)+chr$(0)
 42100 gosub 23000
 42900 goto 21180
 42998 :
 42999 :
-43000 l$=vt$+"="+v1$+"*"+v2$:gosub 23000
+43000 rem l$=vt$+"="+v1$+"*"+v2$
+43010 l$=chr$(dec("ea")) :gosub 23000
 43900 goto 21180
 43998 :
 43999 :
-44000 l$=vt$+"="+v1$+"/"+v2$:gosub 23000
+44000 rem l$=vt$+"="+v1$+"/"+v2$
+44010 l$=chr$(dec("ea")) :gosub 23000
 44900 goto 21180
 44998 :
 44999 :
-45000 l$=vt$+"="+v1$+"^"+v2$:gosub 23000
+45000 rem l$=vt$+"="+v1$+"^"+v2$
+45010 l$=chr$(dec("ea")) :gosub 23000
 45900 goto 21180
 45998 :
 45999 :
 46000 rem generate 16 bit assignment code
-46010 if left$(n1$,4)<> var-" then en=17:l= 46000:goto 39000 :rem asn to const
-46020 l$=sc$+"{ct a}"+chr$(dec("ad"))+chr$(225)+v2$+chr$(0)
-46030 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(225)+v1$+chr$(0)
-46040 l$=l$ +"{ct a}"+chr$(dec("ad"))+chr$(225)+v2$+chr$(1)
-46050 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(225)+v1$+chr$(1)
+46010 if left$(n1$,4)<>"var-" then en=17:l= 46000:goto 39000 :rem asn to const
+46020 l$=sc$+"{ct a}"+chr$(dec("ad"))+chr$(226)+v2$+chr$(0)+chr$(0)
+46030 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+v1$+chr$(0)+chr$(0)
+46040 l$=l$ +"{ct a}"+chr$(dec("ad"))+chr$(226)+v2$+chr$(1)+chr$(0)
+46050 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+v1$+chr$(1)+chr$(0)
 46100 gosub 23000
 46900 goto 21180
 46998 :
@@ -712,7 +729,7 @@
 62010 get#1,a$:printa$;:if st=0 then 62010
 62020 close 1
 62030 end
-62200 open 1,8,2,"test.obj":z$=chr$(0)
+62200 open 1,8,2,"test.ml":z$=chr$(0)
 62210 get#1,a$:printright$(hex$(asc(a$+z$)),2)", ";:if st=0 then 62210
 62220 close 1
 62230 end
