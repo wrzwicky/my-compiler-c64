@@ -1,4 +1,5 @@
-!- compiler.8.0
+!- compiler.8.1
+!- run for compiler; run 50000 for linker
 0 rem compiler.8.0, 21 may 1991
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and
@@ -6,30 +7,31 @@
 4 rem -compiler is to use parsec's
 5 rem  token routines.
 9 :
-10 print "{white}{clear}{down*2}welcome to zparser compiler, v8.0{down}"
+10 print "{clear}{down*2}welcome to z compiler, v8.0{down}"
 15 fo=0:po=0:rem no device output
 20 gosub 30000:rem init arrays
 30 rem (init tokens)
-39 :
-40 read ne:dim er$(ne):for i=1 to ne
-50 read er$(i):next
+32 goto 1000    :rem run compiler
+38 :
+39 restore 39120
+40 read ne:dim em$(ne):for i=1 to ne
+50 read em$(i):next
 55 rem * data is at ln 63500
 59 :
 80 pe=1:rem print all errors
 82 :
 89 rem open bank for exp. eval. stack
 90 ty$="math.stack":gosub 26000
-92 if er<>0 then print "can't open system stack!" :goto 9000
+92 if en<>0 then print "can't open system stack!" :goto 9000
 94 mb=b :rem record bank for math stack
 96 :
 98 print "{down}ready for formulae."
 100 print "{down}ok."
 110 f$=""
-120 sys 65487:if peek(780)=13 then 135
-130 f$=f$+chr$(peek(780)):goto 120
-135 if f$=" " then print:goto 110
+120 input f$
+135 if f$="" then 110
 137 f$=f$+"{arrow left}"
-140 print:print ":{left}";
+140 print ":{left}";
 150 if left$(f$,4)<>"dump" then 200
 155 for i=1 to nw
 160 : b$=bt$(b(i))
@@ -52,20 +54,20 @@
 305 : l=len(f$)
 310 : for p1=4 to l
 320 :   if mid$(f$,p1,1)<>" " then next
-330 : if p1>l then er=1:l=330:ptr=5:            gosub 39000:goto 100
+330 : if p1>l then en=1:l=330:ptr=5:            gosub 39000:goto 100
 332 : for p2=p1+1 to l
 334 :   if mid$(f$,p2,1)<>" " then next
-336 : if p2>l then er=13:l=336:ptr=p2:          gosub 39000:goto 100
+336 : if p2>l then en=13:l=336:ptr=p2:          gosub 39000:goto 100
 340 : w$ =mid$(f$,p1+1,p2-p1-1):              ty$="*"+mid$(f$,p2+1,l-p2-1)
-350 : gosub 26000:if er<>0 then 100
-355 : gosub 27000:if er<>0 then 100
+350 : gosub 26000:if en<>0 then 100
+355 : gosub 27000:if en<>0 then 100
 360 : rem   "variable '";vr$;"' created as ";nt$
 370 : goto 100
 380 :
 390 if left$(f$,4)<>"file" then 490
 400 : for i=4 to len(f$)
 410 :   if mid$(f$,i,1)<>" " then next
-420 : if i>len(f$) then er=1:l=420:ptr=i       :gosub 39000:goto 100
+420 : if i>len(f$) then en=1:l=420:ptr=i       :gosub 39000:goto 100
 430 : n$=mid$(f$,i+1,len(f$)-i-1)
 440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34):fo=1:open 8,8,2
 450 : pl=0
@@ -80,8 +82,7 @@
 899 :
 900 gosub 10000
 910 goto 100
-1000 dim w$(10),ml$(10),pt$(10)
-1001 gosub 5000
+1000 gosub 5000
 1005 input "filename (.fig is added)? test.fig{left*10}";f$
 1010 if right$(f$,4)=".fig" then f$=left$(f$,len(f$)-4)
 1015 scratch (f$+".obj")
@@ -95,27 +96,26 @@
 1101 p=1 : l=len(l$)
 1102 if p <= l then  if mid$(l$,p,1) <> " " then p=p+1 :goto 1102
 1104 w$ = left$(l$,p-1) : if p < l then p$=right$(l$,l-p) :else p$ = ""
-1110 gosub 10000 :rem find word
-1115 print "{space*2}word #";w
+1110 gosub 24000 :rem find word
+1115 print "{space*2}word #";wl%
 1120 if p$ <> "" then gosub 31000 :rem compile params
-1130 s=0 : m$=ml$(w) : gosub 34004 :rem write data
+1130 s=0 : m$=dc$(dr(wl%)) : gosub 34040 :rem write data
 1140 if s1=0 then 1100
 1190 :
 1200 s=0 : m$ = chr$(96)
-1210 gosub 34004
+1210 gosub 34040
 1899 :
 1900 close of:close 1
 1910 end
 1998 :
 1999 :
 5000 restore 6000
-5010 nw=0
+5010 ty$="func":gosub 26000
 5020 read w$:if w$="{arrow left}end" then 5080
-5030 w$(nw)=w$
-5040 read pt$(nw)
-5050 read v$:if v$<>"{arrow left}" then ml$(nw)=ml$(nw)+chr$(input(v$)):goto 5050
-5060 nw=nw+1:goto 5020
-5070 nw=nw-1
+5030 gosub 27000:if en<>0 then 39000
+5040 dr(wl%)=nd:read dp$(nd)
+5050 read v$:if v$<>"{arrow left}" then dc$(nd)=dc$(nd)+chr$(dec(v$)):goto 5050
+5060 nd=nd+1:goto 5020
 5080 return
 6000 data open,"i1 @ a,i1 @ x,i1 @ y"
 6005 data 20,ba,ff, a9,00,20,bd,ff
@@ -144,7 +144,7 @@
 9997 :
 9998 :
 9999 :
-10000 ptr=0:part=1:sp=1:er=0:pe=1             :ms=0
+10000 ptr=0:part=1:sp=1:en=0:pe=1:ms=0
 10050 :
 10060 rem get next char
 10070 ptr=ptr+1
@@ -158,11 +158,11 @@
 10130 if c$<"a" or c$>"z" then 10170
 10140 : if part=2 then op$="*":gosub 21000      :rem implied mult
 10145 : part=2
-10150 : gosub 20200 :if er<>0 then return       :rem extract a var
+10150 : gosub 20200 :if en<>0 then return       :rem extract a var
 10155 : goto 10060
 10160 :
 10170 if c$<>"+"and c$<>"*"and c$<>"/"and c$<>"^"and c$<>"="andc$<>","then 10210
-10180 : if part=1 then er=1:l=10180:gosub        39000:return:rem var needed
+10180 : if part=1 then en=1:l=10180:gosub        39000:return:rem var needed
 10190 : if part=2 then op$=c$:gosub 21000       :part=1:goto 10060
 10200 :
 10210 if c$<>"-" then 10300
@@ -174,7 +174,7 @@
 10320 : if part=2 then op$="*":gosub 21000       :pr=pr+10:part=1:goto 10060
 10330 :
 10340 if c$<>")" then 10380
-10350 : if part=1 then er=1:l=10350:gosub        39000:return
+10350 : if part=1 then en=1:l=10350:gosub        39000:return
 10355 : rem else ...
 10360 :  if pr>10 then pr=pr-10
 10365 :  goto 10060
@@ -182,7 +182,7 @@
 10380 rem anything else to process?
 10510 :
 10520 rem what's this char?
-10530 er=3:l=10530:gosub 39000:return
+10530 en=3:l=10530:gosub 39000:return
 10540 :
 19980 :
 19990 :
@@ -203,14 +203,14 @@
 20140 :
 20200 rem extract variable
 20210 :
-20220 er=0 : w$=c$
+20220 en=0 : w$=c$
 20230 ptr=ptr+1 : c$=mid$(f$,ptr,1)
 20260 if c$<"0" or (c$>"9" and c$<"a") or c$>"z" and c$<>"." then 20300
 20280 w$=w$+c$ : goto 20230
 20290 :
 20300 ptr=ptr-1
 20310 gosub 24000
-20320 if d%<>0 then er=11:l=20200              :goto 39000 :rem undef'd var
+20320 if d%<>0 then en=11:l=20200              :goto 39000 :rem undef'd var
 20330 vr$="var(" + str$(b(wl%)) + "," +  str$(n(wl%)) + ")"
 20340 nt$=bt$(b(wl%))
 20350 return
@@ -236,7 +236,7 @@
 21150 if op$="/" then 44000
 21160 if op$="^" then 45000
 21165 if op$="=" then 46000
-21170 l=21170:er=3:gosub 39000:return
+21170 l=21170:en=3:gosub 39000:return
 21180 v2$="t"
 21190 if sp=1 then 21200
 21195 if tr<=ps(sp-1) then 21100
@@ -250,7 +250,7 @@
 21230 ps(sp)=op
 21235 ts$(sp)=n2$
 21240 sp=sp+1
-21250 if sp>ss then er=10:l=21250:gosub        39000:return
+21250 if sp>ss then en=10:l=21250:gosub        39000:return
 21260 return
 21270 :
 22000 rem pull stuff
@@ -285,34 +285,33 @@
 24110 d%=0
 24120 if w$>w$(wl%) then d%=1
 24130 if w$<w$(wl%) then d%=-1
-24135 print "("wl%;d%")"
 24140 return
 24999 :
 25000 rem insert a space in word list
 25010 if nw=50 then print"word overflow!":return
 25020 nw=nw+1:for ii=nw-1 to wl% step -1
 25030 w$(ii+1)=w$(ii)
-25040 b(ii+1)=b(ii):n(ii+1)=n(ii):next
+25040 b(ii+1)=b(ii):n(ii+1)=n(ii):dr(ii+1)=dr(ii):next
 25050 return
 25999 :
 26000 rem open a bank
-26005 er=0
+26005 en=0
 26010 if nb=0 then b=0:goto 26050
 26020 for b=0 to nb-1
 26030 if ty$=bt$(b) then 26060
 26040 next
-26045 if b>bs then er=15:l=26045:              gosub 39000:goto 27070
+26045 if b>bs then en=15:l=26045:              gosub 39000:goto 27070
 26050 bt$(b)=ty$:nb=nb+1:goto 26070
 26060 ty$=bt$(b)
 26070 return
 26999 :
 27000 rem insertion sort one word (w$)         into bank b
-27005 er=0
+27005 en=0
 27010 print w$;" ";
 27020 gosub 24000:rem find pos
-27030 if d%=0 then er=14:l=27030:gosub 39000:goto 27070
+27030 if d%=0 then en=14:l=27030:gosub 39000:goto 27070
 27040 if d%=1 then wl%=wl%+1
-27050 gosub 25000:w$(wl%)=w$:b(wl%)=b:n(wl%)=nn(b):nn(b)=nn(b)+1
+27050 gosub 25000:w$(wl%)=w$:b(wl%)=b:n(wl%)=nn(b):nn(b)=nn(b)+1:dr(wl%)=-1
 27060 printtab(16)"inserted as ";ty$
 27070 return
 27999 :
@@ -323,114 +322,116 @@
 30020 rem stack: var,op,priority,type
 30030 ps(0)=0:rem force finish a line
 30040 :
-30050 dim an$(20),ad(20),at$(20),al(20):       rem ary name,dim,type,loc
-30060 ts=20:dim w$(ts),b(ts),n(ts):            rem tokens: words,bank #,elem #
-30070 nw=0:rem total number of tokens
-30080 bs=5:dim bt$(bs),nn(bs):                 rem banks: type, # of elem
-30090 nb=0:rem number of banks
-30100 dim param$(bs,ts,5):rem params for       everything
-30110 rem  vars:mem loc
-30120 cm$="":dim cm(20):rem tokenized          command line
-30130 rem er$(ne):rem errors
-30140 return
-30150 :
-30160 :
+30050 dim an$(20),ad(20),at$(20),al(20)       :rem ary name,dim,type,loc
+30060 ts=20:dim w$(ts),b(ts),n(ts),dr(ts)     :rem tokens: words,bank #,elem #
+30070 nw=0:rem total number of words                     : and data ref #
+30080 dim dp(ts),dc(ts)                       :rem params and code for words
+30090 nd=0                                    :rem # data items
+30100 bs=5:dim bt$(bs),nn(bs)                 :rem banks: type, # of elem
+30110 nb=0:rem number of banks
+30120 dim param$(bs,ts,5)                     :rem params for everything
+30130 rem  vars:mem loc
+30140 cm$="":dim cm(20):rem tokenized          command line
+30150 rem em$(ne):rem errors
+30160 return
 30170 :
 30180 :
+30190 :
+30200 :
 31000 rem compile parameters
-31001 rem  w  = index of parameter template (word number)
-31002 rem  p$ = string to be compiled
-31003 if pt$(w) = "" then return
-31004 it=0 : ip=0 : m$=""
-31005 print " (what var type?) ";
-31006 : s$=""
-31007 : it=it+1:v$=mid$(pt$(w), it, 1)
-31008 : it=it+1:c$=mid$(pt$(w), it, 1)
-31009 : if c$>="0" and c$<="9" then s$=s$+c$:goto 31008
-31010 : print" var type: ";v$;" - ";
-31011 :
-31012 : if v$="i" then gosub 32000:goto 31016
-31013 : if v$="s" then gosub 33000:goto 31016
-31014 : print "unknown": goto 9000
-31015 :
-31016 if it>1 and ip>1 then 31005
-31017 :
-31018 s=0 : gosub 34004 :rem select data, insert it
-31019 return
-31020 :
-32000 if s$="" then print"missing int size": goto 32050
-32001 s=val(s$):if s<1 or s>4 then print"unsupported int size":goto 32050
-32002 :
-32003 n$="" : print " (fetch the number) ";
-32004 ip=ip+1:c$=mid$(p$,ip,1):if c$=" " then 32004   :rem strip leading spcs
-32005 if c$<"0" or c$>"9" then 32007
-32006 n$=n$+c$ : ip=ip+1 : c$=mid$(p$, ip, 1) : goto 32005
-32007 n=val(n$):n$=""
-32008 :
-32009 print " (convert number to int) ";
-32010 for i=1 to s
-32011 : n=n/256:n$=n$+chr$( (n - int(n)) * 256 + .2 ):n=int(n)
-32012 : next i
-32013 :
-32014 it=it+1:if mid$(pt$(w), it, 1) <> "@" then print"unknown template command":goto 32050
-32015 it=it+1
-32016 :
-32017 print " (fetch storage location) ";
-32018 l$="":lt=0 :rem lt=loc type: 0=dec ad, 1=hex ad, 2=reg
-32019 it=it+1:c$=mid$(pt$(w), it, 1)
-32020 : if instr("0123456789", c$) > 0  then   l$=l$+c$:goto 32019
-32021 : if c$="$" then                         lt=1:goto 32019
-32022 : if lt=1 and instr("abcdef", c$) > 0  then l$=l$+c$:goto 32019
-32023 : if instr("axy", c$) > 0  then lt=2    :l$=l$+c$:goto 32019
-32024 if lt=2 then 32038: rem handle register storage
-32025 if lt=1 then l=dec(right$(l$,len(l$)-1))
-32026 if lt=0 then l=val(l$)
-32027 :
-32028 print " (generate code to store the bytes) ";
-32029 for i=0 to s-1
-32030 : m$ = m$ + chr$(169)+mid$(n$,i+1,1)
-32031 : lh=int(l/256) :ll=l-lh*256
-32032 : m$ = m$ + chr$(141)chr$(ll)chr$(lh)
-32033 : l = l+1
-32034 : next
-32035 :
-32036 goto 32050
-32037 :
-32038 if len(l$) <> len(n$) then print "number of regs doesn't match specified int size":goto 32050
-32039 :
-32040 rem set up ld? instructions
-32041 ld(1)=169:ld(2)=162:ld(3)=160
-32042 :
-32043 print " (load reg(s)) ";
-32044 for i=1 to len(l$)
-32045 : m$ = m$ + chr$(ld(instr("axy",mid$(l$,i,1)))) + mid$(n$,i,1)
-32046 : next
-32047 :
-32048 goto 32050
-32049 :
-32050 print " (advance indices to next ',') ";
-32051 it=instr(pt$(w), ",", it)
-32052 ip=instr(p$, ".", ip)
-32053 :
-32054 print
-32055 return
-32056 :
+31010 rem  wl% = index of parameter template (word number)
+31020 rem  p$  = string to be compiled
+31030 w=dr(wl%):if dp$(w) = "" then return
+31040 it=0 : ip=0 : m$=""
+31050 print " (what var type?) ";
+31060 : s$=""
+31070 : it=it+1:v$=mid$(dp$(w), it, 1)
+31080 : it=it+1:c$=mid$(dp$(w), it, 1)
+31090 : if c$>="0" and c$<="9" then s$=s$+c$:goto 31080
+31100 : print" var type: ";v$;" - ";
+31110 :
+31120 : if v$="i" then gosub 32000:goto 31160
+31130 : if v$="s" then gosub 33000:goto 31160
+31140 : print "unknown": goto 9000
+31150 :
+31160 if it>1 and ip>1 then 31050
+31170 :
+31180 s=0 : gosub 34040 :rem select data, insert it
+31190 return
+31200 :
+32000 if s$="" then print"missing int size": goto 32500
+32010 s=val(s$):if s<1 or s>4 then print"unsupported int size":goto 32500
+32020 :
+32030 n$="" : print " (fetch the number) ";
+32040 ip=ip+1:c$=mid$(p$,ip,1):if c$=" " then 32040   :rem strip leading spcs
+32050 if c$<"0" or c$>"9" then 32070
+32060 n$=n$+c$ : ip=ip+1 : c$=mid$(p$, ip, 1) : goto 32050
+32070 n=val(n$):n$=""
+32080 :
+32090 print " (convert number to int) ";
+32100 for i=1 to s
+32110 : n=n/256:n$=n$+chr$( (n - int(n)) * 256 + .2 ):n=int(n)
+32120 : next i
+32130 :
+32140 it=it+1:if mid$(dp$(w), it, 1) <> "@" then print"unknown template command":goto 32500
+32150 it=it+1
+32160 :
+32170 print " (fetch storage location) ";
+32180 l$="":lt=0 :rem lt=loc type: 0=dec ad, 1=hex ad, 2=reg
+32190 it=it+1:c$=mid$(dp$(w), it, 1)
+32200 : if instr("0123456789", c$) > 0  then   l$=l$+c$:goto 32190
+32210 : if c$="$" then                         lt=1:goto 32190
+32220 : if lt=1 and instr("abcdef", c$) > 0  then l$=l$+c$:goto 32190
+32230 : if instr("axy", c$) > 0  then lt=2    :l$=l$+c$:goto 32190
+32240 if lt=2 then 32380: rem handle register storage
+32250 if lt=1 then l=dec(right$(l$,len(l$)-1))
+32260 if lt=0 then l=val(l$)
+32270 :
+32280 print " (generate code to store the bytes) ";
+32290 for i=0 to s-1
+32300 : m$ = m$ + chr$(169)+mid$(n$,i+1,1)
+32310 : lh=int(l/256) :ll=l-lh*256
+32320 : m$ = m$ + chr$(141)+chr$(ll)+chr$(lh)
+32330 : l = l+1
+32340 : next
+32350 :
+32360 goto 32500
+32370 :
+32380 if len(l$) <> len(n$) then print "number of regs doesn't match specified int size":goto 32500
+32390 :
+32400 rem set up ld? instructions
+32410 ld(1)=169:ld(2)=162:ld(3)=160
+32420 :
+32430 print " (load reg(s)) ";
+32440 for i=1 to len(l$)
+32450 : m$ = m$ + chr$(ld(instr("axy",mid$(l$,i,1)))) + mid$(n$,i,1)
+32460 : next
+32470 :
+32480 goto 32500
+32490 :
+32500 print " (advance indices to next ',') ";
+32510 it=instr(dp$(w), ",", it)
+32520 ip=instr(p$, ".", ip)
+32530 :
+32540 print
+32550 return
+32560 :
 33000 return :rem strings not implemented yet
 34000 rem generate 'write data' linker command
-34001 rem   s  = segment to insert data into
-34002 rem   m$ = data to write
-34003 :
-34004 if s <> cs then cs = s :print#of,chr$(64+s);
-34005 rem if s>63, use 'quick select'
-34006 rem if len(m$) > 63 then <use long form of write, if it exists>
-34007 print#of,chr$(len(m$));m$; :rem insert byte count & data
-34008 return
+34010 rem   s  = segment to insert data into
+34020 rem   m$ = data to write
+34030 :
+34040 if s <> cs then cs = s :print#of,chr$(64+s);
+34050 rem if s>63, use 'quick select'
+34060 rem if len(m$) > 63 then <use long form of write, if it exists>
+34070 print#of,chr$(len(m$));m$; :rem insert byte count & data
+34080 return
 39000 rem report errors
 39005 if pe=0 then return
-39010 if er<1 or er>ne then print"bad error # ("er") in"l:return
+39010 if en<1 or en>ne then print"bad error # ("en") in"l:return
 39020 if ptr>0 then print " {left}"tab(ptr-1);"^ ("c$")";
 39030 print
-39040 print "error in line"l"{left}:":printer$(er)
+39040 print "error in line"l"{left}:":printem$(en)
 39050 return
 39060 :
 39070 :
@@ -463,7 +464,7 @@
 45900 goto 21180
 45998 :
 45999 :
-46000 if left$(n1$,1)<>"*" then er=17:l= 46000:goto 39000 :rem assign to const
+46000 if left$(n1$,1)<>"*" then en=17:l= 46000:goto 39000 :rem assign to const
 46010 l$=v1$+"="+v2$:gosub 23000
 46900 goto 21180
 46998 :
@@ -471,7 +472,7 @@
 49994 rem fig linker
 49995 :
 50000 open 5,8,15,"i":close 5:if ds<>0 then printds$:goto 59100
-50002 f$="linktest"
+50002 f$="test"
 50005 print ".obj file to link [";f$;"]";:input f$
 50010 if right$(f$,4) <> ".obj" then i$=f$+".obj": else i$=f$:                       f$=left$(i$,len(i$)-4)
 50012 open 2,8,2,i$:close 2:if ds<>0 then print ds$:goto 50005
