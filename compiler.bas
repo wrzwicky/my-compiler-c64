@@ -1,5 +1,5 @@
-!- compiler.7.1
-   10 print"{down}piler.com{down}"
+!- compiler.7.2
+   10 print"{down}piler.com, v7.2{down}"
    20 dim w$(10),ml$(10),pt$(10)
    30 nw=0
    40 read w$:if w$="{arrow left}end" then 90
@@ -38,18 +38,55 @@
   540 goto 500
   998 :
   999 :
- 1000 input "filename (.fig is added)? test.fig{left}{left}{left}{left}{left}{left}{left}{left}{left}{left}";f$
+ 1000 print"{down}piler.com, v7.2{down}"
+ 1005 dim w$(10),ml$(10),pt$(10)
+ 1006 gosub 5000
+ 1007 input "filename (.fig is added)? test.fig{left}{left}{left}{left}{left}{left}{left}{left}{left}{left}";f$
  1010 if right$(f$,4)=".fig" then f$=left$(f$,len(f$)-4)
  1015 scratch (f$+".ml")
  1020 open 1,8,2,f$+".fig,s,r"
- 1030 of=2:open of,8,3,f$+".ml,p,w"
- 1040 print#of,chr$(0)chr$(2*16);
+ 1030 of=2:open of,8,3,f$+".obj,u,w"
+ 1040 print#of,chr$(64)chr$(196);"code";chr$(0); :rem select and name code seg
  1099 :
  1100 input#1,w$:s1=st
  1110 gosub 10000:rem find word
  1120 printw$;w
  1130 print#of,ml$(w);
  1140 if s1=0 then 1100
+ 1899 :
+ 1900 close of:close 1
+ 1910 end
+ 1998 :
+ 1999 :
+ 5000 restore 6000
+ 5010 nw=0
+ 5020 read w$:if w$="{arrow left}end" then 5080
+ 5030 w$(nw)=w$
+ 5040 read pt$(nw)
+ 5050 read v$:if v$<>"{arrow left}" then ml$(nw)=ml$(nw)+chr$(dec(v$)):goto 5050
+ 5060 nw=nw+1:goto 5020
+ 5070 nw=nw-1
+ 5080 return
+ 6000 data open,""
+ 6005 data a9,00,20,bd,ff,a9,04,a2
+ 6010 data 04,a0,00,20,ba,ff,20,c0,ff,{arrow left}
+ 6020 :
+ 6030 data start,""
+ 6035 data a2,04,20,c9,ff,{arrow left}
+ 6040 :
+ 6050 data hello,""
+ 6055 data a9,48,20,d2,ff,a9,45,20
+ 6060 data d2,ff,a9,4c,20,d2,ff,a9
+ 6070 data 4c,20,d2,ff,a9,4f,20,d2
+ 6080 data ff,a9,0d,20,d2,ff,{arrow left}
+ 6090 :
+ 6100 data stop,""
+ 6105 data 20,cc,ff,{arrow left}
+ 6110 :
+ 6120 data close,""
+ 6125 data a9,04,20,c3,ff,{arrow left}
+ 6130 :
+ 6140 data {arrow left}end
  8999 :
  9000 print#of,chr$(96)
  9010 close of
@@ -347,3 +384,8 @@
  61270 :
  61280 print "resolver is done{down}{down}"
  61290 return
+ 61999 :
+ 62000 open 1,8,2,"test.fig"
+ 62010 get#1,a$:printa$;:if st=0 then 62010
+ 62020 close 1
+ 62030 end
