@@ -1,4 +1,4 @@
-!- compiler.6
+!- compiler.7
    10 print"{down}piler.com{down}"
    20 dim w$(10),ml$(10),pt$(10)
    30 nw=0
@@ -20,7 +20,7 @@
   140 data reg2,"i2 @ yx"
   141 data 20,d2,ff,{arrow left}
   159 :
-  160 data regs,"i1 @ a,i2 @ xy
+  160 data regs,"i1 @ a,i2 @ xy"
   161 data 20,cc,ff,{arrow left}
   179 :
   180 data close,"i1 @ a"
@@ -81,7 +81,7 @@
  11210 :
  11220 return
  11999 :
- 12000 if s$="" then print"missing int siye": goto 12900
+ 12000 if s$="" then print"missing int size": goto 12900
  12010 s=val(s$):if s<1 or s>4 then print"unsupported int size":goto 12900
  12020 :
  12030 n$="" : print " (fetch the number) ";
@@ -138,31 +138,50 @@
  12934 print
  12940 return
  12999 :
+ 13000 return :rem strings not implemented yet
  49990 :
  49991 :
  49992 :
  49993 :
  49994 rem fig linker
  49995 :
- 50000 f$="linktest":input "file to link (must end in '.obj') [linktest.obj]";f$
+ 50000 open 5,8,15,"i":close 5:if ds<>0 then printds$:goto 59100
+ 50002 f$="linktest"
+ 50005 print ".obj file to link [";f$;"]";:input f$
  50010 if right$(f$,4) <> ".obj" then i$=f$+".obj": else i$=f$:                       f$=left$(i$,len(i$)-4)
- 50020 o$=f$+".ml":print "executable name [";o$;"]";:input o$
- 50025 print "- in ";i$;" and out ";o$ : print
+ 50012 open 2,8,2,i$:close 2:if ds<>0 then print ds$:goto 50005
+ 50020 o$=f$+".ml"
+ 50021 print "executable name [";o$;"]";:input o$
+ 50023 open 2,8,2,o$:close 2:if ds=0 then print "-scratching file":scratch (o$)
+ 50025 print "link: in ";i$;" and out ";o$ : print
  50030 :
  50040 rem --- general inits ---
  50050 z$=chr$(0)
- 50060 dim ss(100), sv(100) : rem symbol segments, symbol values
+ 50060 dim ss(100), sv(100) : rem symbol segments, values
  50070 dim gt$(63),ga(63),gp(63) : rem segment titles, addresses, pointers
+ 50075 : tg=0 : ts=0 :rem highest (top) seg#, sym#
  50080 :
  50090 :
- 50100 :
+ 50100 for ps = 1 to 2
  50110 :
- 50120 rem --- pass 1 ---
- 50130 open 2,8,2,i$:if ds <> 0 then printds$:goto 59000
- 50140 :
- 50150 rem --- pass 1 inits ---
- 50160 ps = 1 : rem pass #
+ 50120 rem --- pass 1 inits ---
+ 50125 if ps=1 then begin
+ 50130 : zl = 1 : rem # times to do pass 1
+ 50140 : bend
+ 50145 :
+ 50150 rem --- pass 2 inits ---
+ 50155 if ps=2 then begin
+ 50158 : gosub 61000  :rem resolve segs and syms
+ 50160 : open 3,8,3,o$+",p,w":if ds <> 0 then printds$:goto 59100
+ 50161 : b=int(ga(0)/256):print#3,chr$(ga(0)-256*b);chr$(b);      :rem load address
+ 50162 : zl = tg+1 : rem # times to do pass 2
+ 50163 : ad = ga(0)
+ 50165 : bend
  50170 :
+ 50172 for zi=1 to zl
+ 50174 : if ps = 2  and  ga(zi-1) > ad then for i=1 to ad-ga(zi-1) : print#3,z$;         : next : ad=ga(zi-1)
+ 50178 : open 2,8,2,i$+",r":if ds <> 0 then printds$:goto 59100
+ 50179 :
  50180 get#2,c$ :h=asc(c$+z$) :s2=st :rem chunk header
  50190 if (h and 192) = 0   then gosub 51000 : goto 50260 : rem fetch data
  50200 if (h and 192) = 64  then gosub 52000 : goto 50260 : rem set segment
@@ -182,24 +201,28 @@
  51020 b = h and 63
  51025 print b;" bytes"
  51030 gp(sg) = gp(sg) + b
- 51040 if ps > 1 then 51500
+ 51040 if ps = 2  and  sg = zi - 1  then 51500
  51050 for i=1 to b  : rem skip the data
- 51060 get#2,c$:next
+ 51060 : get#2,c$:next
  51070 return
  51498 :
  51499 rem tranfer data to executable (pass 2)
- 51500 return
+ 51500 : for i=1 to b  :rem transfer the data
+ 51510 :   get#2,c$:print#3,c$;:next
+ 51520 : bend
+ 51530 return
  51998 :
  51999 :
  52000 rem set current segment (pass 1 and 2)
  52010 sg = h and 63
  52020 print "current segment is now"; sg
- 52030 return
+ 52030 if sg>tg then tg=sg
+ 52040 return
  52399 :
  52998 :
  52999 :
- 53000 rem unused command
- 53010 print "nonsense command ("h") in file!"
+ 53000 rem unused command range
+ 53010 print "nonsense command (";h;") in file!"
  53020 goto 59000
  53998 :
  53999 :
@@ -207,13 +230,18 @@
  54010 gosub 60100 : s=b
  54020 gosub 60100
  54025 print "put symbol"; s; "at address"; b
- 54030 ss(s) = -1 : sv(s) = b :rem segnum=-1 means no segment
+ 54026 if s>ts then ts=s
+ 54028 if ps=1 then begin
+ 54030 : ss(s) = -1 : sv(s) = b :rem segnum=-1 means no segment
+ 54035 : bend
  54040 return
  54099 :
  54100 rem force segment address
  54110 gosub 60100
  54115 print "put segment"; sg; " at address"; b
- 54120 ga(sg) = b
+ 54118 if ps=1 then begin
+ 54120 : ga(sg) = b
+ 54125 : bend
  54130 return
  54199 :
  54200 rem put symbol in segment
@@ -221,7 +249,10 @@
  54220 gosub 60000          :rem # bytes
  54225 print "put symbol"; s; " in segment"; sg; ", offset"; gp(sg); ",";
  54227 : print b; " byte";:if b>1 then print"s": else print
- 54230 ss(s) = sg : sv(s) = gp(sg) : gp(sg) = gp(sg) + b
+ 54228 if s>ts then ts=s
+ 54230 if ps=1 then begin
+ 54232 : ss(s) = sg : sv(s) = gp(sg) : gp(sg) = gp(sg) + b
+ 54234 : bend
  54240 return
  54299 :
  54300 rem name segment
@@ -229,23 +260,51 @@
  54320 t$=""
  54330 get#2,c$:if c$<>"" then t$=t$+c$:print c$;:goto 54330
  54340 print
- 54350 if ps > 1 then return
- 54360 st$(s) = t$
+ 54350 if ps = 1 then begin
+ 54360 : st$(s) = t$
+ 54365 : bend
  54370 return
  54399 :
- 55000 rem insert symbol
+ 55000 rem insert symbol into executable
  55010 s = h and 15 : d = h and 16
  55020 gosub 60100
  55030 print "insert symbol"; b; "here as"; s; "bytes, ";
  55040 if d=0 then print "low"; : else print "high";
  55050 print " byte first"
- 55060 return
+ 55055 if ss(b)=0 then print "{ct o}   *** symbol is not defined ***":return                :rem count error
+ 55060 if ps=2 and sg=zi-1 then begin    :rem do the insertion if at right seg
+ 55062 : v=sv(b)                         :rem  (get val to ins)
+ 55065 : if d=1 then begin               :rem  high byte first
+ 55070 :   s=s-1 : d=256^int(log(v)/log(2)/8+.99)    :rem min # bytes
+ 55080 :   for i=s to 0 step -1
+ 55085 :     c=int(v/d) : v=v-b*d : d=d/256
+ 55090 :     print#3,chr$(c);
+ 55100 :     next
+ 55110 :  bend : else begin                      :rem low byte first
+ 55120 :   s=s-1
+ 55130 :   for i=0 to s
+ 55140 :     v=v/256 : c=(v-int(v))*256 : v=int(v)
+ 55150 :     print#3,chr$(c);
+ 55160 :     next
+ 55170 :   bend
+ 55180 : bend
+ 55190 return
  55998 :
  55999 :
- 59000 print "all done"
- 59010 close 4:close 2
- 59020 end
- 59030 :
+ 59000 print "{down}-one run of pass";ps;"done-{down}"
+ 59010 close 2                 :rem close input file
+ 59015 if ps=2 then ad = ad+gp(zi-1)
+ 59020 next zi                 :rem repeat this pass
+ 59025 print "{reverse on}W  pass";ps;"{left} done W"
+ 59030 if ps=2 then close 3    :rem close output file (pass 2 only)
+ 59040 next ps                 :rem do next pass
+ 59050 end
+ 59099 :
+ 59100 rem emergency stop
+ 59110 print "emergency abort!"
+ 59120 close 3:close 2
+ 59130 end
+ 59999 :
  60000 rem get next byte into c1$, b = value
  60010 get#2,c1$ : c1$=left$(c1$+z$,1)
  60020 b = asc(c1$)
@@ -257,3 +316,30 @@
  60130 b=asc(c2$) * 256 + asc(c1$)
  60140 return
  60199 :
+ 60997 :
+ 60998 rem resolver - located all segments and symbols
+ 60999 :
+ 61000 print:print
+ 61010 print "resolver"
+ 61020 ad=ga(0)
+ 61030 if ad=0 then ad=49152
+ 61040 print "base address of program [";ad;"]";:input ad
+ 61090 :
+ 61100 print "{down}resolving segments ... "
+ 61110 for i=0 to tg
+ 61120 : if ga(i)=0 then ga(i)=ad : ad=ad+gp(i)
+ 61125 : print "seg";i;"@";ga(i)
+ 61130 : next
+ 61140 rem print "done"
+ 61190 :
+ 61200 print "resolving symbols ... "
+ 61210 for i=0 to ts
+ 61220 : if ss(i) > 0 then begin   :rem -1=predef'd, 0=code only
+ 61230 :   sv(i)=sv(i)+ga(ss(i))
+ 61235 : print "sym";i;"@";sv(i)
+ 61240 :   bend
+ 61250 : next
+ 61260 rem print "done"
+ 61270 :
+ 61280 print "resolver is done{down}{down}"
+ 61290 return
