@@ -1,6 +1,6 @@
-!- compiler.8.2.1
-!- run for compiler; run 50000 for linker
-0 rem compiler.8.2.1, 13 jul 1991
+!- compiler.8.2.2
+!- run for test; run 1000 for compiler; run 50000 for linker
+0 rem compiler.8.2.2, 24 jul 1991
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and
 3 rem  compiler 8.0
@@ -11,7 +11,7 @@
 15 fo=0:po=0:rem no device output
 20 gosub 30000:rem init arrays
 30 rem (init tokens)
-32 goto 1000    :rem run compiler
+32 rem  1000    :rem run compiler
 38 :
 39 restore 39120
 40 read ne:dim em$(ne):for i=1 to ne
@@ -32,10 +32,11 @@
 135 if f$="" then 110
 137 f$=f$+"{arrow left}"
 140 print ":{left}";
+149 :
 150 if left$(f$,4)<>"dump" then 200
 155 for i=1 to nw
 160 : b$=bt$(b(i))
-165 : if left$(b$,1)="*" then print w$(i)      tab(20)right$(b$,len(b$)-1)
+165 : if left$(b$,4)="var-" then print w$(i) tab(20) right$(b$,len(b$)-4)
 170 : next i
 175 goto 100
 180 :
@@ -58,11 +59,14 @@
 332 : for p2=p1+1 to l
 334 :   if mid$(f$,p2,1)<>" " then next
 336 : if p2>l then en=13:l=336:ptr=p2:          gosub 39000:goto 100
-340 : w$ =mid$(f$,p1+1,p2-p1-1):              ty$="*"+mid$(f$,p2+1,l-p2-1)
+340 : w$=mid$(f$,p1+1,p2-p1-1) : ty$=mid$(f$,p2+1,l-p2-1)
+342 : rem determine byte length of type ty$
+344 : t$=left$(ty$,1) : if t$="i" or t$="x" then tl=2 : else tl=5
+346 : ty$="var-"+ty$
 350 : gosub 26000:if en<>0 then 100
 355 : gosub 27000:if en<>0 then 100
 360 : rem   "variable '";vr$;"' created as ";nt$
-362 print "(create var:";195;wl%;1;")"
+362 print "(create var:";195;wl%;tl;")"
 370 : goto 100
 380 :
 390 if left$(f$,4)<>"file" then 490
@@ -228,9 +232,13 @@
 21065 op=op+pr
 21070 if op>ps(sp-1) then pv$=vr$:             goto 21210
 21080 tp$=op$:tr=op
-21090 rem
-21100 gosub 22000:v1$=vr$:n1$=nt$
+21090 :
+21100 if v2$="t" then v2$="("+str$(mb)+","+str$(ms)+")"
+21102 gosub 22000:v1$=vr$:n1$=nt$
+21105 if v1$="t" then v1$="("+str$(mb)+","+str$(ms)+")"
 21110 if v1$="t+" then ms=ms-1:v1$="var(" + str$(mb) + "," + str$(ms) + ")"
+21114 rem define accumulator t
+21115 vt$="("+str$(mb)+","+str$(ms)+")"
 21120 if op$="+" then 41000
 21130 if op$="-" then 42000
 21140 if op$="*" then 43000
@@ -244,7 +252,8 @@
 21200 op$=tp$:op=tr
 21210 if vs$(sp-1)<>"t" then 21220
 21212 vs$(sp-1)="t+"
-21214 l$="var(" + str$(mb) + "," + str$(ms) + ")=t" :gosub 23000
+21213 rem actual pushes not needed; t is now top of stack
+21214 rem l$="var(" + str$(mb) + "," + str$(ms) + ")=t" :gosub 23000
 21216 ms=ms+1 :if ms>mm then mm=ms
 21220 vs$(sp)=v2$
 21225 os$(sp)=op$
@@ -266,7 +275,7 @@
 23000 rem generate next line number
 23001 rem  and send line to devices
 23010 pl=pl+10
-23020 print pl;l$;tab(25)n1$;tab(32)n2$
+23020 print pl;l$;tab(40)n1$;tab(52)n2$
 23030 if fo=1 then print#8,pl;l$
 23040 if po=1 then print#4,pl;l$
 23050 return
@@ -299,12 +308,12 @@
 26005 en=0
 26010 if nb=0 then b=0:goto 26050
 26020 for b=0 to nb-1
-26030 if ty$=bt$(b) then print "(select bank:";64+b;")":return
-26040 next
+26030 : if ty$=bt$(b) then print "<<select bank:";64+b;")":return
+26040 : next
 26042 rem create new bank, if space permits
 26045 if b>bs then en=15:l=26045:              gosub 39000:goto 27070
-26050 bt$(b)=ty$:nb=nb+1
-26060 print "(new bank:";64+b;196;ty$;0;")"
+26050 nb=nb+1 : bt$(b)=ty$ : tl(b)=tl
+26060 print "<<new bank:";64+b;196;ty$;0;")"
 26070 return
 26999 :
 27000 rem insertion sort one word (w$)         into bank b
@@ -446,27 +455,27 @@
 39140 data illegal variable name,divide by 0,stack overflow,undefined variable
 39150 data too many close parenthesis,unknown var type,var already exists
 39160 data too many banks,too many tokens in this bank,assignment to a constant
-41000 l$="t="+v1$+"+"+v2$:gosub 23000
+41000 l$=vt$+"="+v1$+"+"+v2$:gosub 23000
 41900 goto 21180
 41998 :
 41999 :
-42000 l$="t="+v1$+"-"+v2$:gosub 23000
+42000 l$=vt$+"="+v1$+"-"+v2$:gosub 23000
 42900 goto 21180
 42998 :
 42999 :
-43000 l$="t="+v1$+"*"+v2$:gosub 23000
+43000 l$=vt$+"="+v1$+"*"+v2$:gosub 23000
 43900 goto 21180
 43998 :
 43999 :
-44000 l$="t="+v1$+"/"+v2$:gosub 23000
+44000 l$=vt$+"="+v1$+"/"+v2$:gosub 23000
 44900 goto 21180
 44998 :
 44999 :
-45000 l$="t="+v1$+"^"+v2$:gosub 23000
+45000 l$=vt$+"="+v1$+"^"+v2$:gosub 23000
 45900 goto 21180
 45998 :
 45999 :
-46000 if left$(n1$,1)<>"*" then en=17:l= 46000:goto 39000 :rem assign to const
+46000 if left$(n1$,4)<>"var-" then en=17:l= 46000:goto 39000 :rem asn to const
 46010 l$=v1$+"="+v2$:gosub 23000
 46900 goto 21180
 46998 :
