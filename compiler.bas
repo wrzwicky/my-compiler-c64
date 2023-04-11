@@ -1,6 +1,6 @@
-!- compiler.8.2 - add linker support for vars
+!- compiler.8.2.1
 !- run for compiler; run 50000 for linker
-0 rem compiler.8.2, 8 jul 1991
+0 rem compiler.8.2.1, 13 jul 1991
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and
 3 rem  compiler 8.0
@@ -507,8 +507,9 @@
 50163 : ad = ga(0)
 50165 : bend
 50170 :
-50172 for zi=1 to zl
-50174 : if ps = 2  and  ga(zi-1) > ad then for i=1 to ad-ga(zi-1) : print#3,z$;         : next : ad=ga(zi-1)
+50172 for zi=1 to zl : print "working on segment";zi-1;"{down}"
+50173 : rem pad distance between segs only if this next one is not empty
+50174 : if ps = 2  and  gs(zi-1) > 0  and  ga(zi-1) > ad then                             for i=1 to ga(zi-1)-ad : print#3,z$; : next : ad=ga(zi-1)
 50178 : open 2,8,2,i$+",r":if ds <> 0 then printds$:goto 59100
 50179 :
 50180 get#2,c$ :h=asc(c$+z$) :s2=st :rem chunk header
@@ -555,7 +556,7 @@
 53020 goto 59000
 53998 :
 53999 :
-54000 rem define symbol
+54000 rem define symbol = value
 54010 gosub 60000 : s=b
 54020 gosub 60100
 54025 print "define symbol (";sg;",";s;") at address"; b
@@ -577,13 +578,15 @@
 54199 :
 54200 rem put symbol in segment
 54210 gosub 60000 : s=b    :rem symbol #
-54220 gosub 60000          :rem # bytes
+54220 gosub 60100          :rem # bytes
 54225 print "create symbol"; s; " in segment"; sg; ", offset"; gs(sg); ",";
-54227 : print b; " byte";:if b>1 then print"s": else print
+54227 : print b; " byte";:if b<>1 then print"s": else print
 54228 if ps=1 then begin
 54230 : if gl(sg)<=s then gl(sg)=s+1
 54232 : sl(sg, s) = gs(sg) : gs(sg) = gs(sg) + b
-54234 : bend
+54234 : bend : else begin                       :rem reserve space for var
+54236 :   if sg = zi-1 and b > 0 then  for i=1 to b:print#3,z$;:next
+54238 :   bend
 54240 return
 54299 :
 54300 rem name segment
@@ -597,23 +600,23 @@
 54370 return
 54399 :
 55000 rem insert symbol into executable
-55010 s = h and 15 : d = h and 16
-55020 gosub 60000 : g=b : gosub 60000
-55030 print "insert symbol ("; g;",";b; ") here as"; s; "bytes, ";
+55010 l = h and 15 : d = h and 16
+55020 gosub 60000 : g=b : gosub 60000 : s=b : gosub 60100 : o=b
+55030 print "insert symbol ("; g;",";s; ") here as"; l; "bytes, ";
 55040 if d=0 then print "low"; : else print "high";
 55050 print " byte first"
-55055 if b>=gl(g) then print "{ct o}{space*3}*** symbol is not defined ***":return                :rem count error
+55055 if s>=gl(g) then print "{ct o}{space*3}*** symbol is not defined ***":return                :rem count error
 55060 if ps=2 and sg=zi-1 then begin    :rem do the insertion if at right seg
-55062 : v=sl(g,b)                       :rem  (get val to ins)
+55062 : v=sl(g,s) + o                   :rem  (get val to ins)
 55065 : if d=1 then begin               :rem  high byte first
-55070 :   s=s-1 : d=256^int(log(v)/log(2)/8+.99)    :rem min # bytes
-55080 :   for i=s to 0 step -1
+55070 :   l=l-1 : d=256^int(log(v)/log(2)/8+.99)    :rem min # bytes
+55080 :   for i=l to 0 step -1
 55085 :     c=int(v/d) : v=v-b*d : d=d/256
 55090 :     print#3,chr$(c);
 55100 :     next
 55110 :  bend : else begin                      :rem low byte first
-55120 :   s=s-1
-55130 :   for i=0 to s
+55120 :   l=l-1
+55130 :   for i=0 to l
 55140 :     v=v/256 : c=(v-int(v))*256 : v=int(v)
 55150 :     print#3,chr$(c);
 55160 :     next
@@ -624,7 +627,7 @@
 55999 :
 59000 print "{down}-one run of pass";ps;"done-{down}"
 59010 close 2                 :rem close input file
-59015 if ps=2 then ad = ad+gp(zi-1)
+59015 if ps=2 then ad = ad+gs(zi-1)
 59020 next zi                 :rem repeat this pass
 59025 print "{reverse on}W{space*2}pass";ps;"{left} done W"
 59030 if ps=2 then close 3    :rem close output file (pass 2 only)
