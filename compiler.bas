@@ -1,4 +1,4 @@
-!- compiler.8.2.2
+!- compiler.8.2.3
 !- run for test; run 1000 for compiler; run 50000 for linker
 0 rem compiler.8.2.2, 24 jul 1991
 1 rem  by bill zwicky
@@ -75,6 +75,7 @@
 420 : if i>len(f$) then en=1:l=420:ptr=i       :gosub 39000:goto 100
 430 : n$=mid$(f$,i+1,len(f$)-i-1)
 440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34):fo=1:open 8,8,2
+445 : of=8  :rem output file logical #
 450 : pl=0
 460 : l$="dim var("+str$(bs)+",100)":gosub 23000
 470 : goto 100
@@ -93,7 +94,7 @@
 1015 scratch (f$+".obj")
 1020 open 1,8,2,f$+".fig,s,r"
 1030 of=2:open of,8,3,f$+".obj,u,w"
-1040 print#of,chr$(64)chr$(196);"code";chr$(0); :rem select and name code seg
+1040 sc$=chr$(64) : l$=sc$+chr$(196)+"code"+chr$(0) : gosub 23000                  :rem select and name code seg
 1050 :
 1060 cs = -1 :rem current segment
 1099 :
@@ -166,7 +167,7 @@
 10150 : gosub 20200 :if en<>0 then return       :rem extract a var
 10155 : goto 10060
 10160 :
-10170 if c$<>"+"and c$<>"*"and c$<>"/"and c$<>"^"and c$<>"="andc$<>","then 10210
+10170 if c$<>"+"and c$<>"*"and c$<>"/"and c$<>"^"and c$<>"="andc$<>"#"then 10210    :rem '#' replaces ','
 10180 : if part=1 then en=1:l=10180:gosub        39000:return:rem var needed
 10190 : if part=2 then op$=c$:gosub 21000       :part=1:goto 10060
 10200 :
@@ -181,7 +182,7 @@
 10340 if c$<>")" then 10380
 10350 : if part=1 then en=1:l=10350:gosub        39000:return
 10355 : rem else ...
-10360 :  if pr>10 then pr=pr-10
+10360 :  if pr>=10 then pr=pr-10
 10365 :  goto 10060
 10370 :
 10380 rem anything else to process?
@@ -216,7 +217,7 @@
 20300 ptr=ptr-1
 20310 gosub 24000
 20320 if d%<>0 then en=11:l=20200              :goto 39000 :rem undef'd var
-20330 vr$="var(" + str$(b(wl%)) + "," +  str$(n(wl%)) + ")"
+20330 vr$=chr$(b(wl%)) + chr$(n(wl%))
 20340 nt$=bt$(b(wl%))
 20350 return
 20498 :
@@ -224,27 +225,29 @@
 21000 rem push var,op,priority
 21005 v2$=vr$:n2$=nt$
 21010 op=5    :rem if op$ is a func
-21020 if op$="{arrow left}" then op=0:pr=0                :rem force end of expression
+21020 if op$="{arrow left}" or op$="#" then op=0:pr=0      :rem force end of expression
 21030 if op$="=" then op=1
 21040 if op$="+" or op$="-" then op=2
 21050 if op$="*" or op$="/" then op=3
 21060 if op$="^" then op=4
 21065 op=op+pr
+21067 if sp<=1 then 21220         :rem empty stack!
 21070 if op>ps(sp-1) then pv$=vr$:             goto 21210
 21080 tp$=op$:tr=op
 21090 :
-21100 if v2$="t" then v2$="("+str$(mb)+","+str$(ms)+")"
+21100 if v2$="t" then v2$=chr$(mb)+chr$(ms)
 21102 gosub 22000:v1$=vr$:n1$=nt$
-21105 if v1$="t" then v1$="("+str$(mb)+","+str$(ms)+")"
-21110 if v1$="t+" then ms=ms-1:v1$="var(" + str$(mb) + "," + str$(ms) + ")"
+21105 if v1$="t" then v1$=chr$(mb)+chr$(ms)
+21110 if v1$="t+" then ms=ms-1:v1$=chr$(mb) + chr$(ms)
 21114 rem define accumulator t
-21115 vt$="("+str$(mb)+","+str$(ms)+")"
+21115 vt$=chr$(mb)+chr$(ms)
 21120 if op$="+" then 41000
 21130 if op$="-" then 42000
 21140 if op$="*" then 43000
 21150 if op$="/" then 44000
 21160 if op$="^" then 45000
 21165 if op$="=" then 46000
+21167 if op$="#" then 21220     :rem is comma -> next part of 'tuple'
 21170 l=21170:en=3:gosub 39000:return
 21180 v2$="t"
 21190 if sp=1 then 21200
@@ -275,9 +278,9 @@
 23000 rem generate next line number
 23001 rem  and send line to devices
 23010 pl=pl+10
-23020 print pl;l$;tab(40)n1$;tab(52)n2$
-23030 if fo=1 then print#8,pl;l$
-23040 if po=1 then print#4,pl;l$
+23020 print pl;"(data)";tab(40)n1$;tab(52)n2$
+23030 if fo=1 then print#of,l$;
+23040 if po=1 then print#4,l$;
 23050 return
 23998 :
 23999 :
@@ -440,7 +443,7 @@
 39000 rem report errors
 39005 if pe=0 then return
 39010 if en<1 or en>ne then print"bad error # ("en") in"l:return
-39020 if ptr>0 then print " {left}"tab(ptr-1);"^ ("c$")";
+39020 if ptr>0 then print " {left}"tab(ptr+1);"^ ("c$")";
 39030 print
 39040 print "error in line"l"{left}:":printem$(en)
 39050 return
@@ -455,11 +458,25 @@
 39140 data illegal variable name,divide by 0,stack overflow,undefined variable
 39150 data too many close parenthesis,unknown var type,var already exists
 39160 data too many banks,too many tokens in this bank,assignment to a constant
-41000 l$=vt$+"="+v1$+"+"+v2$:gosub 23000
+41000 rem generate 16 bit addition code
+41010 l$=sc$+"{ct a}"+chr$(24)+chr$(dec("ad"))+chr$(225)+v1$+chr$(0)
+41020 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(225)+v2$+chr$(0)
+41030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(225)+vt$+chr$(0)
+41040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(225)+v1$+chr$(1)
+41050 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(225)+v2$+chr$(1)
+41060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(225)+vt$+chr$(1)
+41100 gosub 23000
 41900 goto 21180
 41998 :
 41999 :
-42000 l$=vt$+"="+v1$+"-"+v2$:gosub 23000
+42000 rem generate 16 bit subtraction code
+42010 l$=sc$+"{ct b}"+chr$(56)+chr$(dec("ad"))+chr$(225)+v1$+chr$(0)
+42020 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(225)+v2$+chr$(0)
+42030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(225)+vt$+chr$(0)
+42040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(225)+v1$+chr$(1)
+42050 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(225)+v2$+chr$(1)
+42060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(225)+vt$+chr$(1)
+42100 gosub 23000
 42900 goto 21180
 42998 :
 42999 :
@@ -475,8 +492,13 @@
 45900 goto 21180
 45998 :
 45999 :
-46000 if left$(n1$,4)<>"var-" then en=17:l= 46000:goto 39000 :rem asn to const
-46010 l$=v1$+"="+v2$:gosub 23000
+46000 rem generate 16 bit assignment code
+46010 if left$(n1$,4)<> var-" then en=17:l= 46000:goto 39000 :rem asn to const
+46020 l$=sc$+"{ct a}"+chr$(dec("ad"))+chr$(225)+v2$+chr$(0)
+46030 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(225)+v1$+chr$(0)
+46040 l$=l$ +"{ct a}"+chr$(dec("ad"))+chr$(225)+v2$+chr$(1)
+46050 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(225)+v1$+chr$(1)
+46100 gosub 23000
 46900 goto 21180
 46998 :
 46999 :
