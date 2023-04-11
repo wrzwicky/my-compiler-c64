@@ -1,6 +1,6 @@
-!- compiler.8.1.1
+!- compiler.8.2 - add linker support for vars
 !- run for compiler; run 50000 for linker
-0 rem compiler.8.0, 21 may 1991
+0 rem compiler.8.2, 8 jul 1991
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and
 3 rem  compiler 8.0
@@ -62,6 +62,7 @@
 350 : gosub 26000:if en<>0 then 100
 355 : gosub 27000:if en<>0 then 100
 360 : rem   "variable '";vr$;"' created as ";nt$
+362 print "(create var:";195;wl%;1;")"
 370 : goto 100
 380 :
 390 if left$(f$,4)<>"file" then 490
@@ -294,15 +295,16 @@
 25040 b(ii+1)=b(ii):n(ii+1)=n(ii):dr(ii+1)=dr(ii):next
 25050 return
 25999 :
-26000 rem open a bank
+26000 rem open a bank and select it
 26005 en=0
 26010 if nb=0 then b=0:goto 26050
 26020 for b=0 to nb-1
-26030 if ty$=bt$(b) then 26060
+26030 if ty$=bt$(b) then print "(select bank:";64+b;")":return
 26040 next
+26042 rem create new bank, if space permits
 26045 if b>bs then en=15:l=26045:              gosub 39000:goto 27070
-26050 bt$(b)=ty$:nb=nb+1:goto 26070
-26060 ty$=bt$(b)
+26050 bt$(b)=ty$:nb=nb+1
+26060 print "(new bank:";64+b;196;ty$;0;")"
 26070 return
 26999 :
 27000 rem insertion sort one word (w$)         into bank b
@@ -469,25 +471,26 @@
 46900 goto 21180
 46998 :
 46999 :
-49994 rem fig linker
-49995 :
-50000 open 5,8,15,"i":close 5:if ds<>0 then printds$:goto 59100
-50002 f$="test"
-50005 print ".obj file to link [";f$;"]";:input f$
-50010 if right$(f$,4) <> ".obj" then i$=f$+".obj": else i$=f$:                       f$=left$(i$,len(i$)-4)
-50012 open 2,8,2,i$:close 2:if ds<>0 then print ds$:goto 50005
+50000 rem fig linker
+50001 :
+50004 open 5,8,15,"i":close 5:if ds<>0 then printds$:goto 59100
+50010 f$="test"
+50012 print ".obj file to link [";f$;"]";:input f$
+50014 if right$(f$,4) <> ".obj" then i$=f$+".obj": else i$=f$:                       f$=left$(i$,len(i$)-4)
+50018 open 2,8,2,i$:close 2:if ds<>0 then print ds$:goto 50005
 50020 o$=f$+".ml"
 50021 print "executable name [";o$;"]";:input o$
 50023 open 2,8,2,o$:close 2:if ds=0 then print "-scratching file":scratch (o$)
 50025 print "link: in ";i$;" and out ";o$ : print
 50030 :
 50040 rem --- general inits ---
-50050 z$=chr$(0)
-50060 dim ss(100), sv(100) : rem symbol segments, values
-50070 dim gt$(63),ga(63),gp(63) : rem segment titles, addresses, pointers
-50075 : tg=0 : ts=0 :rem highest (top) seg#, sym#
-50080 :
-50090 :
+50050 z$=chr$(0) : mb = 10 : rem max banks
+50060 dim sl(mb,20) : rem symbol location
+50070 dim gt$(mb),ga(mb),gs(mb) : rem segment titles, addresses, size (bytes)
+50080 dim gl$(mb) : rem segment length (words)
+50090 : tg=0 : rem highest (top) seg#
+50098 :
+50099 :
 50100 for ps = 1 to 2
 50110 :
 50120 rem --- pass 1 inits ---
@@ -526,7 +529,7 @@
 51010 print "data: segment"; sg; ";";
 51020 b = h and 63
 51025 print b;" bytes"
-51030 gp(sg) = gp(sg) + b
+51030 gs(sg) = gs(sg) + b
 51040 if ps = 2  and  sg = zi - 1  then 51500
 51050 for i=1 to b  : rem skip the data
 51060 : get#2,c$:next
@@ -553,13 +556,15 @@
 53998 :
 53999 :
 54000 rem define symbol
-54010 gosub 60100 : s=b
+54010 gosub 60000 : s=b
 54020 gosub 60100
-54025 print "put symbol"; s; "at address"; b
-54026 if s>ts then ts=s
+54025 print "define symbol (";sg;",";s;") at address"; b
 54028 if ps=1 then begin
-54030 : ss(s) = -1 : sv(s) = b :rem segnum=-1 means no segment
-54035 : bend
+54030 : if sg > tg then tg = sg
+54032 : if gl(sg) <= s then gl(sg) = s+1
+54034 : ga(sg) = -1   : rem flag as bank of constants
+54036 : sl(sg, s) = b
+54038 : bend
 54040 return
 54099 :
 54100 rem force segment address
@@ -567,17 +572,17 @@
 54115 print "put segment"; sg; " at address"; b
 54118 if ps=1 then begin
 54120 : ga(sg) = b
-54125 : bend
+54128 : bend
 54130 return
 54199 :
 54200 rem put symbol in segment
-54210 gosub 60100 : s=b    :rem symbol #
+54210 gosub 60000 : s=b    :rem symbol #
 54220 gosub 60000          :rem # bytes
-54225 print "put symbol"; s; " in segment"; sg; ", offset"; gp(sg); ",";
+54225 print "create symbol"; s; " in segment"; sg; ", offset"; gs(sg); ",";
 54227 : print b; " byte";:if b>1 then print"s": else print
-54228 if s>ts then ts=s
-54230 if ps=1 then begin
-54232 : ss(s) = sg : sv(s) = gp(sg) : gp(sg) = gp(sg) + b
+54228 if ps=1 then begin
+54230 : if gl(sg)<=s then gl(sg)=s+1
+54232 : sl(sg, s) = gs(sg) : gs(sg) = gs(sg) + b
 54234 : bend
 54240 return
 54299 :
@@ -587,19 +592,19 @@
 54330 get#2,c$:if c$<>"" then t$=t$+c$:print c$;:goto 54330
 54340 print
 54350 if ps = 1 then begin
-54360 : st$(s) = t$
+54360 : st$(sg) = t$
 54365 : bend
 54370 return
 54399 :
 55000 rem insert symbol into executable
 55010 s = h and 15 : d = h and 16
-55020 gosub 60100
-55030 print "insert symbol"; b; "here as"; s; "bytes, ";
+55020 gosub 60000 : g=b : gosub 60000
+55030 print "insert symbol ("; g;",";b; ") here as"; s; "bytes, ";
 55040 if d=0 then print "low"; : else print "high";
 55050 print " byte first"
-55055 if ss(b)=0 then print "{ct o}{space*3}*** symbol is not defined ***":return                :rem count error
+55055 if b>=gl(g) then print "{ct o}{space*3}*** symbol is not defined ***":return                :rem count error
 55060 if ps=2 and sg=zi-1 then begin    :rem do the insertion if at right seg
-55062 : v=sv(b)                         :rem  (get val to ins)
+55062 : v=sl(g,b)                       :rem  (get val to ins)
 55065 : if d=1 then begin               :rem  high byte first
 55070 :   s=s-1 : d=256^int(log(v)/log(2)/8+.99)    :rem min # bytes
 55080 :   for i=s to 0 step -1
@@ -645,28 +650,27 @@
 60997 :
 60998 rem resolver - locate all segments and symbols
 60999 :
-61000 print:print
-61010 print "resolver"
+61000 print "{down*2}resolver"
 61020 ad=ga(0)
 61030 if ad=0 then ad=49152
 61040 print "base address of program [";ad;"]";:input ad
 61090 :
-61100 print "{down}resolving segments ... "
-61110 for i=0 to tg
-61120 : if ga(i)=0 then ga(i)=ad : ad=ad+gp(i)
-61125 : print "seg";i;"@";ga(i)
-61130 : next
-61140 rem print "done"
-61190 :
-61200 print "resolving symbols ... "
-61210 for i=0 to ts
-61220 : if ss(i) > 0 then begin   :rem -1=predef'd, 0=code only
-61230 :   sv(i)=sv(i)+ga(ss(i))
-61235 : print "sym";i;"@";sv(i)
-61240 :   bend
-61250 : next
-61260 rem print "done"
-61270 :
+61100 print "{down}resolving segments and symbols ..."
+61110 for g=0 to tg
+61112 : print "seg";g;
+61115 : if ga(g) < 0 then print "already resolved" : else begin
+61120 :   if ga(g)=0 then ga(g)=ad : ad=ad+gs(g)
+61125 :   print "@";ga(g)
+61130 :
+61135 :   if gl(g) > 0 then begin
+61140 :     for s=0 to gl(g)-1
+61150 :       sl(g,s) = sl(g,s) + ga(g)
+61160 :       print "{space*2}sym";s;" @";sl(g,s)
+61170 :       next
+61175 :     bend
+61180 :   bend
+61190 : next
+61200 :
 61280 print "resolver is done{down*2}"
 61290 return
 61999 :
