@@ -1,4 +1,4 @@
-!- compiler.7
+!- compiler.7.1
    10 print"{down}piler.com{down}"
    20 dim w$(10),ml$(10),pt$(10)
    30 nw=0
@@ -29,9 +29,9 @@
   200 data {arrow left}end
   480 :
   490 of=4:open of,4,3
-  500 input "{down}word number";w
+  500 input "{down}word number (0+)";w
   505 if w<0 then close of:end
-  510 print "template=";pt$(w)
+  510 print "command=";w$(w);", template=";pt$(w)
   515 print"separate parameters with a '.'"
   520 input "parameters";p$
   530 gosub 11000
@@ -55,6 +55,9 @@
  9010 close of
  9020 close 1
  9030 end
+ 9997 :
+ 9998 :
+ 9999 :
  10000 rem search for w$ and return its
  10010 rem position in w
  10020 for w=0 to nw
@@ -85,8 +88,9 @@
  12010 s=val(s$):if s<1 or s>4 then print"unsupported int size":goto 12900
  12020 :
  12030 n$="" : print " (fetch the number) ";
- 12040 ip=ip+1:c$=mid$(p$, ip, 1)
- 12050 if c$>="0" and c$<="9" then n$=n$+c$:goto 12040
+ 12035 ip=ip+1:c$=mid$(p$,ip,1):if c$=" " then 12035   :rem strip leading spcs
+ 12040 if c$<"0" or c$>"9" then 12060
+ 12050 n$=n$+c$ : ip=ip+1 : c$=mid$(p$, ip, 1) : goto 12040
  12060 n=val(n$):n$=""
  12070 :
  12080 print " (convert number to int) ";
