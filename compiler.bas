@@ -1,6 +1,11 @@
-!- compiler.7.2
-   10 print"{down}piler.com, v7.2{down}"
+!- compiler.7.3
+    1 rem 10   : compiler
+    2 rem 50000: linker
+    3 rem 62000: file viewers
+    9 :
+   10 print"{down}piler.com, v7.3{down}"
    20 dim w$(10),ml$(10),pt$(10)
+   25 goto 1000
    30 nw=0
    40 read w$:if w$="{arrow left}end" then 90
    50 w$(nw)=w$
@@ -38,21 +43,28 @@
   540 goto 500
   998 :
   999 :
- 1000 print"{down}piler.com, v7.2{down}"
- 1005 dim w$(10),ml$(10),pt$(10)
- 1006 gosub 5000
- 1007 input "filename (.fig is added)? test.fig{left}{left}{left}{left}{left}{left}{left}{left}{left}{left}";f$
+ 1000 gosub 5000
+ 1005 input "filename (.fig is added)? test.fig{left}{left}{left}{left}{left}{left}{left}{left}{left}{left}";f$
  1010 if right$(f$,4)=".fig" then f$=left$(f$,len(f$)-4)
- 1015 scratch (f$+".ml")
+ 1015 scratch (f$+".obj")
  1020 open 1,8,2,f$+".fig,s,r"
  1030 of=2:open of,8,3,f$+".obj,u,w"
  1040 print#of,chr$(64)chr$(196);"code";chr$(0); :rem select and name code seg
+ 1050 :
+ 1060 cs = -1 :rem current segment
  1099 :
- 1100 input#1,w$:s1=st
- 1110 gosub 10000:rem find word
- 1120 printw$;w
- 1130 print#of,ml$(w);
+ 1100 input#1,l$ :print l$ :s1=st :if l$="" then begin :if s1=0 then 1100               :else 1900 :bend
+ 1101 p=1 : l=len(l$)
+ 1102 if p <= l then  if mid$(l$,p,1) <> " " then p=p+1 :goto 1102
+ 1104 w$ = left$(l$,p-1) : if p < l then p$=right$(l$,l-p) :else p$ = ""
+ 1110 gosub 10000 :rem find word
+ 1115 print "  word #";w
+ 1120 if p$ <> "" then gosub 11000 :rem compile params
+ 1130 s=0 : m$=ml$(w) : gosub 15000 :rem write data
  1140 if s1=0 then 1100
+ 1190 :
+ 1200 s=0 : m$ = chr$(96)
+ 1210 gosub 15000
  1899 :
  1900 close of:close 1
  1910 end
@@ -67,12 +79,12 @@
  5060 nw=nw+1:goto 5020
  5070 nw=nw-1
  5080 return
- 6000 data open,""
- 6005 data a9,00,20,bd,ff,a9,04,a2
- 6010 data 04,a0,00,20,ba,ff,20,c0,ff,{arrow left}
+ 6000 data open,"i1 @ a,i1 @ x,i1 @ y"
+ 6005 data 20,ba,ff, a9,00,20,bd,ff
+ 6010 data 20,c0,ff,{arrow left}
  6020 :
- 6030 data start,""
- 6035 data a2,04,20,c9,ff,{arrow left}
+ 6030 data start,"i1 @ x"
+ 6035 data 20,c9,ff,{arrow left}
  6040 :
  6050 data hello,""
  6055 data a9,48,20,d2,ff,a9,45,20
@@ -83,15 +95,14 @@
  6100 data stop,""
  6105 data 20,cc,ff,{arrow left}
  6110 :
- 6120 data close,""
- 6125 data a9,04,20,c3,ff,{arrow left}
+ 6120 data close,"i1 @ a"
+ 6125 data 20,c3,ff,{arrow left}
  6130 :
  6140 data {arrow left}end
  8999 :
- 9000 print#of,chr$(96)
- 9010 close of
- 9020 close 1
- 9030 end
+ 9000 close of
+ 9010 close 1
+ 9090 end
  9997 :
  9998 :
  9999 :
@@ -105,7 +116,8 @@
  11000 rem compile parameters
  11010 rem  w  = index of parameter template (word number)
  11020 rem  p$ = string to be compiled
- 11030 it=0:ip=0
+ 11030 if pt$(w) = "" then return
+ 11035 it=0 : ip=0 : m$=""
  11040 print " (what var type?) ";
  11050 : s$=""
  11060 : it=it+1:v$=mid$(pt$(w), it, 1)
@@ -119,7 +131,8 @@
  11140 :
  11200 if it>1 and ip>1 then 11040
  11210 :
- 11220 return
+ 11220 s=0 : gosub 15000 :rem select data, insert it
+ 11230 return
  11999 :
  12000 if s$="" then print"missing int size": goto 12900
  12010 s=val(s$):if s<1 or s>4 then print"unsupported int size":goto 12900
@@ -151,10 +164,10 @@
  12250 :
  12260 print " (generate code to store the bytes) ";
  12270 for i=0 to s-1
- 12280 : print#of,chr$(169)mid$(n$,i+1,1);
- 12290 : lh=int(l/256):ll=l-lh*256
- 12300 : print#of,chr$(141)chr$(ll)chr$(lh);
- 12305 : l=l+1
+ 12280 : m$ = m$ + chr$(169)+mid$(n$,i+1,1)
+ 12290 : lh=int(l/256) :ll=l-lh*256
+ 12300 : m$ = m$ + chr$(141)chr$(ll)chr$(lh)
+ 12305 : l = l+1
  12310 : next
  12320 :
  12330 goto 12900
@@ -166,7 +179,7 @@
  12540 :
  12550 print " (load reg(s)) ";
  12560 for i=1 to len(l$)
- 12570 : print#of,chr$(ld(instr("axy",mid$(l$,i,1))));mid$(n$,i,1);
+ 12570 : m$ = m$ + chr$(ld(instr("axy",mid$(l$,i,1)))) + mid$(n$,i,1)
  12580 : next
  12590 :
  12600 goto 12900
@@ -175,11 +188,21 @@
  12910 it=instr(pt$(w), ",", it)
  12920 ip=instr(p$, ".", ip)
  12930 :
- 12932 print#of
  12934 print
  12940 return
  12999 :
  13000 return :rem strings not implemented yet
+ 14994 :
+ 14995 :
+ 14996 rem generate 'write data' linker command
+ 14997 rem   s  = segment to insert data into
+ 14998 rem   m$ = data to write
+ 14999 :
+ 15000 if s <> cs then cs = s :print#of,chr$(64+s);
+ 15010 rem if s>63, use 'quick select'
+ 15020 rem if len(m$) > 63 then <use long form of write, if it exists>
+ 15030 print#of,chr$(len(m$));m$; :rem insert byte count & data
+ 15040 return
  49990 :
  49991 :
  49992 :
@@ -249,7 +272,7 @@
  51498 :
  51499 rem tranfer data to executable (pass 2)
  51500 : for i=1 to b  :rem transfer the data
- 51510 :   get#2,c$:print#3,c$;:next
+ 51510 :   get#2,c$:print#3,left$(c$+z$,1);:next
  51520 : bend
  51530 return
  51998 :
@@ -358,7 +381,7 @@
  60140 return
  60199 :
  60997 :
- 60998 rem resolver - located all segments and symbols
+ 60998 rem resolver - locate all segments and symbols
  60999 :
  61000 print:print
  61010 print "resolver"
@@ -389,3 +412,7 @@
  62010 get#1,a$:printa$;:if st=0 then 62010
  62020 close 1
  62030 end
+ 62200 open 1,8,2,"test.obj":z$=chr$(0)
+ 62210 get#1,a$:printright$(hex$(asc(a$+z$)),2)", ";:if st=0 then 62210
+ 62220 close 1
+ 62230 end
