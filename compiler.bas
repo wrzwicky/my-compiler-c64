@@ -1,4 +1,4 @@
-!- compiler.8.3.0 - remove test tool, add menu
+!- compiler.8.3.1
 0 rem compiler.8.3.1, 4 nov 1991
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and compiler 8.0
@@ -78,7 +78,7 @@
 3120 : gosub 26000:if en<>0 then 100
 3130 : gosub 27000:if en<>0 then 100
 3140 : rem   "variable '";vr$;"' created as ";nt$;",";tl;"bytes long."
-3150 : l$=chr$(195)+chr$(wl%)+chr$(tl)+chr$(0)
+3150 : l$=chr$(195)+chr$(n(wl%))+chr$(tl)+chr$(0)
 3160 : gosub 23000
 3170 return
 4998 :
