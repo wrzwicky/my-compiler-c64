@@ -1,3 +1,13 @@
+my-compiler-c64
+
+This project contains my compiler and compiler-compiler experiments from 1990, for C64 and C128, in BASIC.
+These compilers use simple algorithms to perform both lexical and syntactic analysis of simple languages.
+
+I later went on to take compiler classes towards a master's degree and enjoyed them immensely.
+Had an opportunity to get a job building compilers, but blew it.
+
+-----
+
 *.cbmprj file is for CBM prg Studio
 *.bas files are modern ASCII versions of Commodore BASIC programs that CPS compiles to proper tokenized files.
 
