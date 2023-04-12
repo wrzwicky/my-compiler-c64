@@ -1,5 +1,5 @@
-!- compiler.8.3.1
-0 rem compiler.8.3.1, 4 nov 1991
+!- compiler.8.3.2
+0 rem compiler.8.3.2, 24 nov 1991
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and compiler 8.0
 3 rem -compiler uses parsec's token routines
@@ -205,7 +205,7 @@
 20300 ptr=ptr-1
 20310 gosub 24000
 20320 if d%<>0 then en=11:l=20200              :goto 39000 :rem undef'd var
-20330 vr$=chr$(b(wl%)) + chr$(n(wl%)) + chr$(0)
+20330 vr$=chr$(b(wl%)) + chr$(n(wl%)) + chr$(0)+chr$(0)
 20340 nt$=bt$(b(wl%))
 20350 return
 20498 :
@@ -223,12 +223,12 @@
 21070 if op>ps(sp-1) then pv$=vr$:             goto 21210
 21080 tp$=op$:tr=op
 21090 :
-21100 if v2$="t" then v2$=chr$(mb)+chr$(ms)
+21100 if v2$="t" then v2$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
 21102 gosub 22000:v1$=vr$:n1$=nt$
-21105 if v1$="t" then v1$=chr$(mb)+chr$(0)+chr$(4*ms)
-21110 if v1$="t+" then ms=ms-1:v1$=chr$(mb)+chr$(0)+chr$(4*ms)
+21105 if v1$="t" then v1$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
+21110 if v1$="t+" then ms=ms-1:v1$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
 21114 rem define accumulator t
-21115 vt$=chr$(mb)+chr$(0)+chr$(4*ms)
+21115 vt$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
 21117 ty$="code" : gosub 26000
 21120 if op$="+" then 41000
 21130 if op$="-" then 42000
@@ -244,8 +244,7 @@
 21200 op$=tp$:op=tr
 21210 if vs$(sp-1)<>"t" then 21220
 21212 vs$(sp-1)="t+"
-21213 rem actual pushes not needed; t is now top of stack
-21214 rem l$="var(" + str$(mb) + "," + str$(ms) + ")=t" :gosub 23000
+21213 rem actual pushes not needed; t is actually top of stack
 21216 ms=ms+1 :if ms>mm then print "math.stack overflow!!" : return
 21218 if ms>gl(mb) then gl(mb)=ms :rem check size of bank
 21220 vs$(sp)=v2$
@@ -449,23 +448,23 @@
 39150 data too many close parenthesis,unknown var type,var already exists
 39160 data too many banks,too many tokens in this bank,assignment to a constant
 41000 rem generate 16 bit addition code
-41010 l$=sc$+"{ct a}"+chr$(24)+chr$(dec("ad"))+chr$(226)+v1$+chr$(0)+chr$(0)
-41020 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$+chr$(0)+chr$(0)
-41030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(0)+chr$(0)
-41040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+v1$+chr$(1)+chr$(0)
-41050 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$+chr$(1)+chr$(0)
-41060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(1)+chr$(0)
+41010 l$=sc$+"{ct a}"+chr$(24)+chr$(dec("ad"))+chr$(226)+v1$
+41020 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$
+41030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$
+41040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+v1$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
+41050 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
+41060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
 41100 gosub 23000
 41900 goto 21180
 41998 :
 41999 :
 42000 rem generate 16 bit subtraction code
-42010 l$=sc$+"{ct b}"+chr$(56)+chr$(dec("ad"))+chr$(226)+v1$+chr$(0)+chr$(0)
-42020 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+v2$+chr$(0)+chr$(0)
-42030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(0)+chr$(0)
-42040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+v1$+chr$(1)+chr$(0)
-42050 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+v2$+chr$(1)+chr$(0)
-42060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(1)+chr$(0)
+42010 l$=sc$+"{ct b}"+chr$(56)+chr$(dec("ad"))+chr$(226)+v1$
+42020 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+v2$
+42030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$
+42040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+v1$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
+42050 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+v2$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
+42060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
 42100 gosub 23000
 42900 goto 21180
 42998 :
@@ -488,10 +487,10 @@
 45999 :
 46000 rem generate 16 bit assignment code
 46010 if left$(n1$,4)<>"var-" then en=17:l= 46000:goto 39000 :rem asn to const
-46020 l$=sc$+"{ct a}"+chr$(dec("ad"))+chr$(226)+v2$+chr$(0)+chr$(0)
-46030 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+v1$+chr$(0)+chr$(0)
-46040 l$=l$ +"{ct a}"+chr$(dec("ad"))+chr$(226)+v2$+chr$(1)+chr$(0)
-46050 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+v1$+chr$(1)+chr$(0)
+46020 l$=sc$+"{ct a}"+chr$(dec("ad"))+chr$(226)+v2$
+46030 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+v1$
+46040 l$=l$ +"{ct a}"+chr$(dec("ad"))+chr$(226)+v2$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
+46050 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+v1$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
 46100 gosub 23000
 46900 goto 21180
 46998 :
