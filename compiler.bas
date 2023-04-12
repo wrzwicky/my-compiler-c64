@@ -1,11 +1,11 @@
-!- compiler.8.3.3
-0 rem compiler.8.3.3, 8 jan 1992
+!- compiler.8.3.4
+0 rem compiler.8.3.4, 20 jan 1992
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and compiler 8.0
 3 rem -compiler uses parsec's token routines
 9 :
 10 print "{clear}{down}"tab(23)"{reverse on}{cm d}{cm i*29}{cm f}"
-11 print tab(23)"{cm k} welcome to z compiler, v8.2 {reverse on}{cm k}"
+11 print tab(23)"{cm k} welcome to z compiler, v8.3 {reverse on}{cm k}"
 12 print tab(23)"{reverse on}{cm c}{reverse off}{cm i*29}{reverse on}{cm v}{down}"
 15 fo=0:po=0:rem no device output
 20 gosub 30000:rem init arrays
@@ -57,7 +57,7 @@
 1180 : w0% = wl% : print "{space*2}word #";w0%
 1185 : if left$(bt$(b(w0%)), 4) = "var-" then f$=l$ : gosub 10000 :else begin
 1190 :   if p$ <> "" then gosub 31000 :rem compile params
-1200 :   s=0 : m$=dc$(dr(w0%)) : gosub 34040 :rem write data
+1200 :   s=0 : m$=dc$(dr(w0%)) : gosub 34000 :rem write data
 1205 : bend
 1210 bend
 1220 if s1=0 then 1100
@@ -121,7 +121,10 @@
 6120 data close,"i1 @ a"
 6125 data 20,c3,ff,{arrow left}
 6130 :
-6140 data {arrow left}end
+6140 data test,"i2 @ c000;i1 @ ay"
+6150 data {arrow left}
+6160 :
+6170 data {arrow left}end
 8999 :
 9000 close of
 9010 close 1
@@ -279,8 +282,9 @@
 23000 rem write linker data
 23001 rem   l$ = data to write
 23010 :
-23020 print "< data ";
-23030 rem i=1 to len(l$):printright$(hex$(asc(mid$(l$,i,1))),2)" ";:next
+23020 print "< linker codes ";
+23025 if len(l$) < 1 then  print "{ct o}0 bytes! {143}";
+23030 for i=1 to len(l$):printright$(hex$(asc(mid$(l$,i,1))),2)" ";:next
 23040 print ">";tab(55)n1$;tab(67)n2$
 23050 if of<>0 then print#of,l$;
 23060 if po=1 then print#4,l$;
@@ -378,8 +382,10 @@
 31130 : if v$="s" then gosub 33000:goto 31160
 31140 : print "unknown: "v$;c$: goto 9000
 31150 :
-31160 if it>1 and s2<sp then 31050
+31160 if it>1 and s2<sp-1 then 31050
 31170 :
+31172 if it=0 and s2<sp-1 then en=18:l=31172:gosub 39000
+31174 if it>0 and s2=sp-1 then en=19:l=31174:gosub 39000
 31180 ty$="code" : gosub 26000 : l$=m$ :gosub 23000 :rem select cs, ins data
 31190 return
 31200 :
@@ -392,10 +398,10 @@
 32170 print " (fetch storage location) ";
 32180 l$="":lt=0 :rem lt=loc type: 0=dec ad, 1=hex ad, 2=reg
 32190 it=it+1:c$=mid$(dp$, it, 1)
-32200 : if instr("0123456789", c$) > 0  then   l$=l$+c$:goto 32190
-32210 : if c$="$" then                         lt=1:goto 32190
-32220 : if lt=1 and instr("abcdef", c$) > 0  then l$=l$+c$:goto 32190
-32230 : if instr("axy", c$) > 0  then lt=2    :l$=l$+c$:goto 32190
+32200 :  if instr("0123456789", c$) > 0  then   l$=l$+c$:goto 32190
+32210 :  if c$="$" then                         lt=1:goto 32190
+32220 :  if lt=1 and instr("abcdef", c$) > 0  then l$=l$+c$:goto 32190
+32230 :  if instr("axy", c$) > 0  then lt=2    :l$=l$+c$:goto 32190
 32240 if lt=2 then 32380: rem handle register storage
 32250 if lt=1 then l=dec(right$(l$,len(l$)-1))
 32260 if lt=0 then l=val(l$)
@@ -404,11 +410,11 @@
 32285 v$=vs$(s2)
 32287 if v$="t" then v$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
 32290 for i=0 to s-1
-32300 : m$ = m$ + "{ct a}"+chr$(dec("ad"))+chr$(226)+v$+chr$(i)+chr$(0)
-32310 : lh=int(l/256) :ll=l-lh*256
-32320 : m$ = m$ + "{ct c}"+chr$(141)+chr$(ll)+chr$(lh)
-32330 : l = l+1
-32340 : next
+32300 :  m$ = m$ + "{ct a}"+chr$(dec("ad"))+chr$(226)+left$(v1$,2)+chr$(asc(mid$(v1$,3,1))+i)+mid$(v1$,4,1)
+32310 :  lh=int(l/256) :ll=l-lh*256
+32320 :  m$ = m$ + "{ct c}"+chr$(141)+chr$(ll)+chr$(lh)
+32330 :  l = l+1
+32340 :  next
 32350 :
 32360 goto 32500
 32370 :
@@ -441,10 +447,13 @@
 34010 rem   s  = segment to insert data into
 34020 rem   m$ = data to write
 34030 :
-34040 rem if s<64, use 'quick select':
-34050 if s <> cs then cs = s :print#of,chr$(64+s);
-34060 rem if len(m$) < 64, use quick write:
-34070 print#of,chr$(len(m$));m$; :rem insert byte count & data
+34031 print "('write data':";len(m$);" bytes)"
+34035 if m$ <> "" then begin    :rem write only if more than 0 bytes
+34040 :  rem if s<64, use 'quick select':
+34050 :  if s <> cs then cs = s :print#of,chr$(64+s);
+34060 :  rem if len(m$) < 64, use quick write:
+34070 :  print#of,chr$(len(m$));m$; :rem insert byte count & data
+34075 bend
 34080 return
 39000 rem report errors
 39005 if pe=0 then return
@@ -457,11 +466,14 @@
 39070 :
 39100 :
 39110 rem errors-for ln 40
-39120 data 17,missing var,early end of line,syntax,too many '='
+39120 data 19,missing var,early end of line,syntax,too many '='
 39130 data illegal self operator,equation left of '=',illegal op this side of '='
 39140 data illegal variable name,divide by 0,stack overflow,undefined variable
 39150 data too many close parenthesis,unknown var type,var already exists
 39160 data too many banks,too many tokens in this bank,assignment to a constant
+39170 data too many parameters,too few parameters
+39998 :
+39999 :
 41000 rem generate 16 bit addition code
 41010 l$=    "{ct b}"+chr$(24)+chr$(dec("ad"))+chr$(226)+v1$
 41020 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$
@@ -523,10 +535,10 @@
 50025 print "link: in ";i$;" and out ";o$ : print
 50030 :
 50040 rem --- general inits ---
-50050 z$=chr$(0) : mb = 10 : rem max banks
+50050 z$=chr$(0) : mb = 20 : rem max banks
 50060 dim sl(mb,20) : rem symbol location
 50070 dim gt$(mb),ga(mb),gs(mb) : rem segment titles, addresses, size (bytes)
-50080 dim gl$(mb) : rem segment length (words)
+50080 dim gl(mb) : rem segment length (words)
 50090 : tg=0 : rem highest (top) seg#
 50098 :
 50099 :
@@ -571,13 +583,13 @@
 51025 print b;" bytes"
 51030 if ps = 1  then gs(sg) = gs(sg) + b
 51040 if ps = 2  and  sg = zi - 1  then 51500
-51050 for i=1 to b  : rem skip the data
-51060 : get#2,c$:next
+51050 : rem skip the data:
+51060 if b>0 then   for i=1 to b : get#2,c$ : next
 51070 return
 51498 :
 51499 rem tranfer data to executable (pass 2)
 51500 : for i=1 to b  :rem transfer the data
-51510 :   get#2,c$:print#3,left$(c$+z$,1);:next
+51510 if b>0 then   for i=1 to b : get#2,c$ : print#3,left$(c$+z$,1); : next
 51530 return
 51998 :
 51999 :
@@ -722,7 +734,7 @@
 62020 close 1
 62030 end
 62200 open 1,8,2,"test2.obj":z$=chr$(0)
-62210 get#1,a$:printright$(hex$(asc(a$+z$)),2);:if st<>0 then print:62230
+62210 get#1,a$:printright$(hex$(asc(a$+z$)),2);:if st<>0 then 62230
 62220 for i=1 to 15:get#1,a$:print", "right$(hex$(asc(a$+z$)),2);:if st<>0 then 62230 :else next:print:goto 62210
-62230 close 1
+62230 print:close 1
 62240 end
