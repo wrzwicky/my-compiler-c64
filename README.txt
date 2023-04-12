@@ -10,3 +10,5 @@ parser.bas is a simple var=expression parser
 == for C-128 ==
 
 compiler.bas is compiler for the FIG (friendly, interactive, graphic) language
+gencom "generic compiler language" is unknown
+cfg is a ll(1) parser generator
