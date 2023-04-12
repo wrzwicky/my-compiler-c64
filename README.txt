@@ -1,4 +1,8 @@
-*.cbmprj is for CBM prg Studio
+*.cbmprj file is for CBM prg Studio
+*.bas files are modern ASCII versions of Commodore BASIC programs that CPS compiles to proper tokenized files.
+
+Compiled *.prg should be written to disk as PRG type, without extension.
+*.seq likewise should be written as SEQ type, without extension.
 
 == for C-64 ==
 
