@@ -1,11 +1,11 @@
-!- compiler.8.3.5
-0 rem compiler.8.3.5, 25 jan 1992
+!- compiler.8.4.0 - add goto
+0 rem compiler.8.4.0, 25 jan 1992
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and compiler 8.0
-3 rem -compiler uses parsec's token routines
+3 rem -is now considerably different from both of them
 9 :
 10 print "{clear}{down}"tab(23)"{reverse on}{cm d}{cm i*29}{cm f}"
-11 print tab(23)"{cm k} welcome to z compiler, v8.3 {reverse on}{cm k}"
+11 print tab(23)"{cm k} welcome to z compiler, v8.4 {reverse on}{cm k}"
 12 print tab(23)"{reverse on}{cm c}{reverse off}{cm i*29}{reverse on}{cm v}{down}"
 15 fo=0:po=0:rem no device output
 20 gosub 30000:rem init arrays
@@ -35,15 +35,16 @@
 1015 scratch (f$+".obj")
 1020 open 1,8,2,f$+".fig,s,r"
 1030 of=2:open of,8,3,f$+".obj,u,w"
+1032 gosub 5000         :rem build function segment
 1035 tl=0 : rem length of these types is 0
 1040 ty$="code" : gosub 26000 : sc$=chr$(64+b) :rem select and name code seg
+1041 : w$="prg.start" : gosub 27000            :rem where to start running
+1042 : l$=chr$(195)+chr$(n(wl%))+chr$(0)+chr$(0) : gosub 23000
 1045 ty$="math.stack" : gosub 26000 : mb=b     :rem select and name math stack
-1046 m0=0                                      :rem max size of math.space
+1046 : m0 = 0  :rem max number of bytes the math stack needs so far
 1047 rem symbol math.space is declared at end with size m0
-1049 gosub 5000         :rem build function segment
 1050 :
 1060 cs = -1 :rem current segment
-1070 m0 = 4  :rem max number of bytes the math stack needs so far
 1099 :
 1100 input#1,l$ :print l$ :s1=st :if l$="" then begin :if s1=0 then 1100               :else 1800 :bend
 1101 p=1 : l=len(l$)
@@ -51,7 +52,9 @@
 1104 w$ = left$(l$,p-1) : if p < l then p$=right$(l$,l-p) :else p$ = ""
 1110 gosub 24000 :rem find word
 1120 if d%<>0 then begin      :rem word not found
-1130 : if w$="decl" then gosub 3000 :goto 1170
+1130 : if w$="decl"    then gosub 3000 :goto 1170
+1131 : if w$="label"   then gosub 3300 :goto 1170
+1132 : if w$="goto"    then gosub 3400 :goto 1170
 1140 :
 1160 : print "unknown command"           :rem above ifs didn't find cmd
 1170 bend : else begin
@@ -77,22 +80,36 @@
 1998 :
 1999 :
 3000 rem "decl" a variable
-3020 : for p1=4 to l
-3030 :   if mid$(l$,p1,1)<>" " then next
-3040 : if p1>l then en=1:l=330:ptr=5:            gosub 39000:goto 100
-3050 : for p2=p1+1 to l
-3060 :   if mid$(l$,p2,1)<>" " then next
-3070 : if p2>l then en=13:l=336:ptr=p2:          gosub 39000:goto 100
-3080 : w$=mid$(l$,p1+1,p2-p1-1) : ty$=mid$(l$,p2+1,l-p2-1)
-3090 : rem determine byte length of type ty$
-3100 : t$=left$(ty$,1) : if t$="i" or t$="x" then tl=2 : else tl=5
-3110 : ty$="var-"+ty$
-3120 : gosub 26000:if en<>0 then 100
-3130 : gosub 27000:if en<>0 then 100
-3140 : rem   "variable '";vr$;"' created as ";nt$;",";tl;"bytes long."
-3150 : l$=chr$(195)+chr$(n(wl%))+chr$(tl)+chr$(0)
-3160 : gosub 23000
-3170 return
+3020 : l=len(p$) : p1=1 : p2=instr(p$," ",1)
+3030 : if p2=0 then en=13:l=3020:ptr=l+1:        gosub 39000:return
+3040 : w$=left$(p$,p2-1) : ty$=right$(p$,l-p2)
+3050 : rem determine byte length of type ty$
+3060 : t$=left$(ty$,1) : if t$="i" or t$="x" then tl=2 : else tl=5
+3070 : ty$="var-"+ty$
+3080 : gosub 26000:if en<>0 then return
+3090 : gosub 27000:if en<>0 then return
+3100 : rem   "variable '";vr$;"' created as ";nt$;",";tl;"bytes long."
+3110 : rem   "variable '";vr$;"' created as ";nt$;",";tl;"bytes long."
+3120 : l$=chr$(195)+chr$(n(wl%))+chr$(tl)+chr$(0)
+3130 : gosub 23000
+3140 return
+3299 :
+3300 rem place label here in code seg
+3310 : gosub 3500
+3320 : l$=chr$(195)+chr$(n(wl%))+chr$(0)+chr$(0) : gosub 23000
+3330 return
+3399 :
+3400 rem goto a label
+3410 : gosub 3500
+3420 : l$ = "{ct a}"+chr$(76)+chr$(226)+chr$(cs)+chr$(n(wl%))+chr$(0)+chr$(0)
+3430 : gosub 23000
+3440 return
+3499 :
+3500 rem general routine to open code seg and find label in p$
+3510 : ty$="code" : gosub 26000 : if en<>0 then return
+3520 : rem find word; create if it doesn't exist
+3530 : w$=p$ : gosub 24000 : if d%<>0 then gosub 27000 : if en<>0 then return
+3540 return
 4998 :
 4999 :
 5000 restore 6000
@@ -325,7 +342,7 @@
 26040 : next
 26042 rem create new bank, if space permits
 26045 if b>bs then en=15:l=26045:              gosub 39000:goto 27070
-26050 nb=nb+1 : bt$(b)=ty$ : tl(b)=tl
+26050 nb=nb+1 : bt$(b)=ty$ : tl(b)=tl : cs=b
 26055 print "<<new bank:";b;ty$;">>"
 26060 l$=chr$(64+b)+chr$(196)+ty$+chr$(0)
 26070 gosub 23000
