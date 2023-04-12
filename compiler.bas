@@ -1,5 +1,5 @@
-!- compiler.8.3.4
-0 rem compiler.8.3.4, 20 jan 1992
+!- compiler.8.3.5
+0 rem compiler.8.3.5, 25 jan 1992
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and compiler 8.0
 3 rem -compiler uses parsec's token routines
@@ -38,7 +38,8 @@
 1035 tl=0 : rem length of these types is 0
 1040 ty$="code" : gosub 26000 : sc$=chr$(64+b) :rem select and name code seg
 1045 ty$="math.stack" : gosub 26000 : mb=b     :rem select and name math stack
-1046 rem symbol math.space is declared at end
+1046 m0=0                                      :rem max size of math.space
+1047 rem symbol math.space is declared at end with size m0
 1049 gosub 5000         :rem build function segment
 1050 :
 1060 cs = -1 :rem current segment
@@ -121,7 +122,7 @@
 6120 data close,"i1 @ a"
 6125 data 20,c3,ff,{arrow left}
 6130 :
-6140 data test,"i2 @ c000;i1 @ ay"
+6140 data test,"i2 @ $c000;i2 @ ay"
 6150 data {arrow left}
 6160 :
 6170 data {arrow left}end
@@ -260,7 +261,7 @@
 21212 vs$(sp-1)="t+"
 21213 rem actual pushes not needed; t is actually top of stack
 21216 ms=ms+1 :if ms>mm then print "math.stack overflow!!" : return
-21218 if 4*ms>m0 then m0=4*ms :rem check size of bank
+21218 if 4*ms>m0 then m0=4*ms :print"{ct o}m0 is now"m0:rem check size of bank
 21220 vs$(sp)=v2$
 21225 os$(sp)=op$
 21228 if op$=";" then op=-1+pr    :rem stop further ops from getting past here
@@ -382,7 +383,7 @@
 31130 : if v$="s" then gosub 33000:goto 31160
 31140 : print "unknown: "v$;c$: goto 9000
 31150 :
-31160 if it>1 and s2<sp-1 then 31050
+31160 if it>0 and s2<sp-1 then 31050
 31170 :
 31172 if it=0 and s2<sp-1 then en=18:l=31172:gosub 39000
 31174 if it>0 and s2=sp-1 then en=19:l=31174:gosub 39000
@@ -403,14 +404,14 @@
 32220 :  if lt=1 and instr("abcdef", c$) > 0  then l$=l$+c$:goto 32190
 32230 :  if instr("axy", c$) > 0  then lt=2    :l$=l$+c$:goto 32190
 32240 if lt=2 then 32380: rem handle register storage
-32250 if lt=1 then l=dec(right$(l$,len(l$)-1))
+32250 if lt=1 then l=dec(l$)
 32260 if lt=0 then l=val(l$)
 32270 :
 32280 print " (generate code to store the bytes) ";
 32285 v$=vs$(s2)
 32287 if v$="t" then v$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
 32290 for i=0 to s-1
-32300 :  m$ = m$ + "{ct a}"+chr$(dec("ad"))+chr$(226)+left$(v1$,2)+chr$(asc(mid$(v1$,3,1))+i)+mid$(v1$,4,1)
+32300 :  m$ = m$ + "{ct a}"+chr$(dec("ad"))+chr$(226)+left$(v$,2)+chr$(asc(mid$(v$,3,1))+i)+mid$(v$,4,1)
 32310 :  lh=int(l/256) :ll=l-lh*256
 32320 :  m$ = m$ + "{ct c}"+chr$(141)+chr$(ll)+chr$(lh)
 32330 :  l = l+1
@@ -430,7 +431,7 @@
 32439 if v$="t+" then stop : rem ms=ms-1:v$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
 32440 for i=1 to len(l$)
 32450 : r$ = "{ct a}"+chr$(ld(instr("axy",mid$(l$,i,1))))                                    + chr$(226) + left$(v$,2) + chr$(asc(mid$(v$,3,1))+i-1) + mid$(v$,4,1)
-32455 : m$=m$+r$:printlen(r$);
+32455 : m$=m$+r$
 32460 : next
 32470 :
 32480 goto 32500
@@ -712,8 +713,8 @@
 61090 :
 61100 print "{down}resolving segments and symbols ..."
 61110 for g=0 to tg
-61112 : print "seg";g;
-61115 : if ga(g) < 0 then print "already resolved" : else begin
+61112 : print "seg";g;tab(10);"'";st$(g);"' ";
+61115 : if ga(g) < 0 then print "is already resolved" : else begin
 61120 :   if ga(g)=0 then ga(g)=ad : ad=ad+gs(g)
 61125 :   print "@";ga(g)
 61130 :
