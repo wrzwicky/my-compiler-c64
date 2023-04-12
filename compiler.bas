@@ -1,6 +1,5 @@
-!- compiler.8.2.5
-!- run for test; run 1000 for compiler; run 50000 for linker
-0 rem compiler.8.2.5, 12 oct 1991
+!- compiler.8.3.0 - remove test tool, add menu
+0 rem compiler.8.3.1, 4 nov 1991
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and compiler 8.0
 3 rem -compiler uses parsec's token routines
@@ -8,87 +7,28 @@
 10 print "{clear}{down*2}welcome to z compiler, v8.2{down}"
 15 fo=0:po=0:rem no device output
 20 gosub 30000:rem init arrays
+25 :
 30 rem (init tokens)
 38 :
 39 restore 39120
 40 read ne:dim em$(ne):for i=1 to ne
 50 read em$(i):next
-52 :
-55 pe=1:rem print all errors
-59 :
-80 goto 1000    :rem run compiler
-82 :
-85 ty$="code" : gosub 26000 : sc$=chr$(64+b)     :rem select and name code seg
-87 :
-89 rem open bank for exp. eval. stack
-90 ty$="math.stack":gosub 26000
-92 if en<>0 then print "can't open system stack!" :goto 9000
-94 mb=b :rem record bank for math stack
-96 :
-98 print "{down}ready for formulae."
-100 print "{down}ok."
-110 f$=""
-120 input f$
-135 if f$="" then 110
-137 f$=f$+"{arrow left}"
-140 print ":{left}";
-149 :
-150 if left$(f$,4)<>"dump" then 200
-155 for i=1 to nw
-160 : b$=bt$(b(i))
-165 : if left$(b$,4)="var-" then print w$(i) tab(20) right$(b$,len(b$)-4)
-170 : next i
-175 goto 100
-180 :
-200 if left$(f$,4)="quit" then close of:close 4:end
-210 if left$(f$,4)<>"help" then 300
-220 print "available commands:"
-225 print "{space*2}decl - declare a variable"
-230 print "{space*2}dump - list all variables"
-235 print "{space*2}file - open an object file"
-240 print "{space*2}prin - send program to printer"
-250 print "{space*2}help - display this"
-260 print "{space*2}quit - end program"
-270 goto 100
-290 :
-300 if left$(f$,4)<>"decl" then 390
-305 : l=len(f$)
-310 : for p1=4 to l
-320 :   if mid$(f$,p1,1)<>" " then next
-330 : if p1>l then en=1:l=330:ptr=5:            gosub 39000:goto 100
-332 : for p2=p1+1 to l
-334 :   if mid$(f$,p2,1)<>" " then next
-336 : if p2>l then en=13:l=336:ptr=p2:          gosub 39000:goto 100
-340 : w$=mid$(f$,p1+1,p2-p1-1) : ty$=mid$(f$,p2+1,l-p2-1)
-342 : rem determine byte length of type ty$
-344 : t$=left$(ty$,1) : if t$="i" or t$="x" then tl=2 : else tl=5
-346 : ty$="var-"+ty$
-350 : gosub 26000:if en<>0 then 100
-355 : gosub 27000:if en<>0 then 100
-360 : rem   "variable '";vr$;"' created as ";nt$;",";tl;"bytes long."
-365 : l$=chr$(195)+chr$(wl%)+chr$(tl)+chr$(0)
-370 : goto 100
-380 :
-390 if left$(f$,4)<>"file" then 490
-400 : for i=4 to len(f$)
-410 :   if mid$(f$,i,1)<>" " then next
-420 : if i>len(f$) then en=1:l=420:ptr=i       :gosub 39000:goto 100
-430 : n$=mid$(f$,i+1,len(f$)-i-1)
-440 : print "open 8,8,2,"chr$(34);n$",p,w"chr$(34)
-445 : of=0  :rem output file logical #
-450 : pl=0  :rem prg line #
-460 :
-470 : goto 100
-480 :
-490 if left$(f$,4)<>"prin" then 900
-500 : if po=0 then po=1:open 4,4               :print "printer on":goto 520
-510 : if po=1 then po=0:close 4                :print "printer off"
-520 : goto 100
+98 :
+99 :
+100 rem "user interface"
+110 pe=1:rem print all errors
+120 :
+130 df$="test2"
+140 print "{reverse on}c{reverse off}ompiler or {reverse on}l{reverse off}inker?"
+150 getkey a$
+160 if a$="c" then print "{up}{reverse on}compiler{down}" : goto 1000
+170 if a$="l" then print "{up}{right*12}{reverse on}linker{down}" : goto 50000
+180 print "{ct g}";:goto 150
 898 :
 899 :
 900 gosub 10000
 910 goto 100
-1000 input "filename (.fig is added)? test.fig{left*10}";f$
+1000 print "filename (.fig is added) ["df$"]"; :f$=df$ :input f$
 1010 if right$(f$,4)=".fig" then f$=left$(f$,len(f$)-4)
 1015 scratch (f$+".obj")
 1020 open 1,8,2,f$+".fig,s,r"
@@ -96,7 +36,8 @@
 1040 ty$="code" : gosub 26000 : sc$=chr$(64+b) :rem select and name code seg
 1045 ty$="math.stack" : gosub 26000 : mb=b     :rem select and name math stack
 1046 w$="math.space"  : gosub 27000            :rem def sym for stack
-1047 gosub 5000         :rem build function segment
+1047 l$=chr$(195)+chr$(wl%)+chr$(0)+chr$(0) : gosub 23000
+1049 gosub 5000         :rem build function segment
 1050 :
 1060 cs = -1 :rem current segment
 1099 :
@@ -105,19 +46,43 @@
 1102 if p <= l then  if mid$(l$,p,1) <> " " then p=p+1 :goto 1102
 1104 w$ = left$(l$,p-1) : if p < l then p$=right$(l$,l-p) :else p$ = ""
 1110 gosub 24000 :rem find word
-1115 print "{space*2}word #";wl%
-1120 if p$ <> "" then gosub 31000 :rem compile params
-1130 s=0 : m$=dc$(dr(wl%)) : gosub 34040 :rem write data
-1140 if s1=0 then 1100
-1190 :
-1200 s=0 : m$ = chr$(96)
-1210 gosub 34040
+1120 if d%<>0 then begin      :rem word not found
+1130 : if w$="decl" then gosub 3000 :goto 1165
+1160 : print "unknown command"           :rem above ifs didn't find cmd
+1165 : if s1=0 then 1100 :else 1900
+1170 : bend
+1180 print "{space*2}word #";wl%
+1190 if p$ <> "" then gosub 31000 :rem compile params
+1200 s=0 : m$=dc$(dr(wl%)) : gosub 34040 :rem write data
+1210 if s1=0 then 1100
+1220 :
+1230 s=0 : m$ = chr$(96)
+1240 gosub 34040
 1899 :
 1900 print "{down}{reverse on}W compiler is done W"
 1950 close of:close 1
 1960 end
 1998 :
 1999 :
+3000 rem "decl" a variable
+3020 : for p1=4 to l
+3030 :   if mid$(l$,p1,1)<>" " then next
+3040 : if p1>l then en=1:l=330:ptr=5:            gosub 39000:goto 100
+3050 : for p2=p1+1 to l
+3060 :   if mid$(l$,p2,1)<>" " then next
+3070 : if p2>l then en=13:l=336:ptr=p2:          gosub 39000:goto 100
+3080 : w$=mid$(l$,p1+1,p2-p1-1) : ty$=mid$(l$,p2+1,l-p2-1)
+3090 : rem determine byte length of type ty$
+3100 : t$=left$(ty$,1) : if t$="i" or t$="x" then tl=2 : else tl=5
+3110 : ty$="var-"+ty$
+3120 : gosub 26000:if en<>0 then 100
+3130 : gosub 27000:if en<>0 then 100
+3140 : rem   "variable '";vr$;"' created as ";nt$;",";tl;"bytes long."
+3150 : l$=chr$(195)+chr$(wl%)+chr$(tl)+chr$(0)
+3160 : gosub 23000
+3170 return
+4998 :
+4999 :
 5000 restore 6000
 5010 ty$="func":gosub 26000
 5020 read w$:if w$="{arrow left}end" then 5080
@@ -223,7 +188,7 @@
 20146 : next
 20148 :
 20149 rem generate linker codes
-20150 w=nn(b) : nn(b)=nn(b)+1 : vr$=chr$(b)+chr$(w)
+20150 w=nn(b) : nn(b)=nn(b)+1 : vr$=chr$(b)+chr$(w)+chr$(0)
 20155 l$=chr$(195)+chr$(w)+chr$(0)+chr$(0)     :rem define symbol
 20160 l$=l$+chr$(2)+n$                         :rem give it a value
 20170 gosub 23000
@@ -240,7 +205,7 @@
 20300 ptr=ptr-1
 20310 gosub 24000
 20320 if d%<>0 then en=11:l=20200              :goto 39000 :rem undef'd var
-20330 vr$=chr$(b(wl%)) + chr$(n(wl%))
+20330 vr$=chr$(b(wl%)) + chr$(n(wl%)) + chr$(0)
 20340 nt$=bt$(b(wl%))
 20350 return
 20498 :
@@ -260,10 +225,10 @@
 21090 :
 21100 if v2$="t" then v2$=chr$(mb)+chr$(ms)
 21102 gosub 22000:v1$=vr$:n1$=nt$
-21105 if v1$="t" then v1$=chr$(mb)+chr$(ms)
-21110 if v1$="t+" then ms=ms-1:v1$=chr$(mb) + chr$(ms)
+21105 if v1$="t" then v1$=chr$(mb)+chr$(0)+chr$(4*ms)
+21110 if v1$="t+" then ms=ms-1:v1$=chr$(mb)+chr$(0)+chr$(4*ms)
 21114 rem define accumulator t
-21115 vt$=chr$(mb)+chr$(ms)
+21115 vt$=chr$(mb)+chr$(0)+chr$(4*ms)
 21117 ty$="code" : gosub 26000
 21120 if op$="+" then 41000
 21130 if op$="-" then 42000
@@ -534,7 +499,7 @@
 50000 rem fig linker
 50001 :
 50004 open 5,8,15,"i":close 5:if ds<>0 then printds$:goto 59100
-50010 f$="test"
+50010 f$=df$
 50012 print ".obj file to link [";f$;"]";:input f$
 50014 if right$(f$,4) <> ".obj" then i$=f$+".obj": else i$=f$:                       f$=left$(i$,len(i$)-4)
 50018 open 2,8,2,i$:close 2:if ds<>0 then print ds$:goto 50005
@@ -738,11 +703,12 @@
 61280 print "resolver is done{down*2}"
 61290 return
 61999 :
-62000 open 1,8,2,"test.fig"
-62010 get#1,a$:printa$;:if st=0 then 62010
+62000 open 1,8,2,"test2.fig"
+62010 input#1,a$:printa$ :if st=0 then 62010
 62020 close 1
 62030 end
-62200 open 1,8,2,"test.obj":z$=chr$(0)
-62210 get#1,a$:printright$(hex$(asc(a$+z$)),2)", ";:if st=0 then 62210
-62220 close 1
-62230 end
+62200 open 1,8,2,"test2.obj":z$=chr$(0)
+62210 get#1,a$:printright$(hex$(asc(a$+z$)),2);:if st<>0 then print:62230
+62220 for i=1 to 15:get#1,a$:print", "right$(hex$(asc(a$+z$)),2);:if st<>0 then 62230 :else next:print:goto 62210
+62230 close 1
+62240 end
