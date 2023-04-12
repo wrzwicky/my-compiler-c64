@@ -1,10 +1,12 @@
-!- compiler.8.3.2
-0 rem compiler.8.3.2, 24 nov 1991
+!- compiler.8.3.3
+0 rem compiler.8.3.3, 8 jan 1992
 1 rem  by bill zwicky
 2 rem -contains parsec 2.02 and compiler 8.0
 3 rem -compiler uses parsec's token routines
 9 :
-10 print "{clear}{down*2}welcome to z compiler, v8.2{down}"
+10 print "{clear}{down}"tab(23)"{reverse on}{cm d}{cm i*29}{cm f}"
+11 print tab(23)"{cm k} welcome to z compiler, v8.2 {reverse on}{cm k}"
+12 print tab(23)"{reverse on}{cm c}{reverse off}{cm i*29}{reverse on}{cm v}{down}"
 15 fo=0:po=0:rem no device output
 20 gosub 30000:rem init arrays
 25 :
@@ -21,8 +23,8 @@
 130 df$="test2"
 140 print "{reverse on}c{reverse off}ompiler or {reverse on}l{reverse off}inker?"
 150 getkey a$
-160 if a$="c" then print "{up}{reverse on}compiler{down}" : goto 1000
-170 if a$="l" then print "{up}{right*12}{reverse on}linker{down}" : goto 50000
+160 if a$="c" then print "{up}{reverse on}compiler{black}{reverse off} or linker?{blue}{down}" : goto 1000
+170 if a$="l" then print "{up}{black}compiler or {reverse on}linker{blue}{down}" : goto 50000
 180 print "{ct g}";:goto 150
 898 :
 899 :
@@ -33,31 +35,40 @@
 1015 scratch (f$+".obj")
 1020 open 1,8,2,f$+".fig,s,r"
 1030 of=2:open of,8,3,f$+".obj,u,w"
+1035 tl=0 : rem length of these types is 0
 1040 ty$="code" : gosub 26000 : sc$=chr$(64+b) :rem select and name code seg
 1045 ty$="math.stack" : gosub 26000 : mb=b     :rem select and name math stack
-1046 w$="math.space"  : gosub 27000            :rem def sym for stack
-1047 l$=chr$(195)+chr$(wl%)+chr$(0)+chr$(0) : gosub 23000
+1046 rem symbol math.space is declared at end
 1049 gosub 5000         :rem build function segment
 1050 :
 1060 cs = -1 :rem current segment
+1070 m0 = 4  :rem max number of bytes the math stack needs so far
 1099 :
-1100 input#1,l$ :print l$ :s1=st :if l$="" then begin :if s1=0 then 1100               :else 1900 :bend
+1100 input#1,l$ :print l$ :s1=st :if l$="" then begin :if s1=0 then 1100               :else 1800 :bend
 1101 p=1 : l=len(l$)
 1102 if p <= l then  if mid$(l$,p,1) <> " " then p=p+1 :goto 1102
 1104 w$ = left$(l$,p-1) : if p < l then p$=right$(l$,l-p) :else p$ = ""
 1110 gosub 24000 :rem find word
 1120 if d%<>0 then begin      :rem word not found
-1130 : if w$="decl" then gosub 3000 :goto 1165
+1130 : if w$="decl" then gosub 3000 :goto 1170
+1140 :
 1160 : print "unknown command"           :rem above ifs didn't find cmd
-1165 : if s1=0 then 1100 :else 1900
-1170 : bend
-1180 print "{space*2}word #";wl%
-1190 if p$ <> "" then gosub 31000 :rem compile params
-1200 s=0 : m$=dc$(dr(wl%)) : gosub 34040 :rem write data
-1210 if s1=0 then 1100
-1220 :
-1230 s=0 : m$ = chr$(96)
-1240 gosub 34040
+1170 bend : else begin
+1180 : w0% = wl% : print "{space*2}word #";w0%
+1185 : if left$(bt$(b(w0%)), 4) = "var-" then f$=l$ : gosub 10000 :else begin
+1190 :   if p$ <> "" then gosub 31000 :rem compile params
+1200 :   s=0 : m$=dc$(dr(w0%)) : gosub 34040 :rem write data
+1205 : bend
+1210 bend
+1220 if s1=0 then 1100
+1799 :
+1800 s=0 : m$ = chr$(96)
+1810 gosub 34040
+1820 :
+1830 ty$="math.stack" : gosub 26000
+1840 w$="math.space"  : gosub 27000        :rem def sym for stack
+1850 l$=chr$(195)+chr$(n(wl%))+chr$(m0)+chr$(0)
+1860 gosub 23000
 1899 :
 1900 print "{down}{reverse on}W compiler is done W"
 1950 close of:close 1
@@ -187,8 +198,8 @@
 20143 : n=n/256:n$=n$+chr$( (n - int(n)) * 256 + .2 ):n=int(n)
 20146 : next
 20148 :
-20149 rem generate linker codes
-20150 w=nn(b) : nn(b)=nn(b)+1 : vr$=chr$(b)+chr$(w)+chr$(0)
+20149 rem build internal rep. and generate linker codes
+20150 w=nn(b) : nn(b)=nn(b)+1 : vr$=chr$(b)+chr$(w)+chr$(0)+chr$(0)
 20155 l$=chr$(195)+chr$(w)+chr$(0)+chr$(0)     :rem define symbol
 20160 l$=l$+chr$(2)+n$                         :rem give it a value
 20170 gosub 23000
@@ -246,7 +257,7 @@
 21212 vs$(sp-1)="t+"
 21213 rem actual pushes not needed; t is actually top of stack
 21216 ms=ms+1 :if ms>mm then print "math.stack overflow!!" : return
-21218 if ms>gl(mb) then gl(mb)=ms :rem check size of bank
+21218 if 4*ms>m0 then m0=4*ms :rem check size of bank
 21220 vs$(sp)=v2$
 21225 os$(sp)=op$
 21228 if op$=";" then op=-1+pr    :rem stop further ops from getting past here
@@ -315,7 +326,7 @@
 26070 gosub 23000
 26080 return
 26999 :
-27000 rem insertion sort one word (w$)         into bank b
+27000 rem insertion sort one word (w$) into bank b
 27005 en=0
 27010 print w$;" ";
 27020 gosub 24000:rem find pos
@@ -391,6 +402,7 @@
 32270 :
 32280 print " (generate code to store the bytes) ";
 32285 v$=vs$(s2)
+32287 if v$="t" then v$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
 32290 for i=0 to s-1
 32300 : m$ = m$ + "{ct a}"+chr$(dec("ad"))+chr$(226)+v$+chr$(i)+chr$(0)
 32310 : lh=int(l/256) :ll=l-lh*256
@@ -406,9 +418,12 @@
 32410 ld(1)=173:ld(2)=174:ld(3)=172
 32420 :
 32430 print " (load reg(s)) ";
-32435 v$=vs$(s2):printlen(v$);
+32435 v$=vs$(s2)
+32437 if v$="t" then v$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
+32438 rem this next line shouldn't be needed, but what's "t+"?
+32439 if v$="t+" then stop : rem ms=ms-1:v$=chr$(mb)+chr$(0)+chr$(4*ms)+chr$(0)
 32440 for i=1 to len(l$)
-32450 : r$ =      "{ct a}"+chr$(ld(instr("axy",mid$(l$,i,1))))                                  + chr$(226)+v$+chr$(i-1)+chr$(0)
+32450 : r$ = "{ct a}"+chr$(ld(instr("axy",mid$(l$,i,1))))                                    + chr$(226) + left$(v$,2) + chr$(asc(mid$(v$,3,1))+i-1) + mid$(v$,4,1)
 32455 : m$=m$+r$:printlen(r$);
 32460 : next
 32470 :
@@ -426,9 +441,9 @@
 34010 rem   s  = segment to insert data into
 34020 rem   m$ = data to write
 34030 :
-34040 if s <> cs then cs = s :print#of,chr$(64+s);
-34050 rem if s>63, use 'quick select'
-34060 rem if len(m$) > 63 then <use long form of write, if it exists>
+34040 rem if s<64, use 'quick select':
+34050 if s <> cs then cs = s :print#of,chr$(64+s);
+34060 rem if len(m$) < 64, use quick write:
 34070 print#of,chr$(len(m$));m$; :rem insert byte count & data
 34080 return
 39000 rem report errors
@@ -448,49 +463,49 @@
 39150 data too many close parenthesis,unknown var type,var already exists
 39160 data too many banks,too many tokens in this bank,assignment to a constant
 41000 rem generate 16 bit addition code
-41010 l$=sc$+"{ct a}"+chr$(24)+chr$(dec("ad"))+chr$(226)+v1$
+41010 l$=    "{ct b}"+chr$(24)+chr$(dec("ad"))+chr$(226)+v1$
 41020 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$
 41030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$
-41040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+v1$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
-41050 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+v2$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
-41060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
+41040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+left$(v1$,2)+chr$(asc(mid$(v1$,3,1))+1)+mid$(v1$,4,1)
+41050 l$=l$ +"{ct a}"         +chr$(dec("6d"))+chr$(226)+left$(v2$,2)+chr$(asc(mid$(v2$,3,1))+1)+mid$(v2$,4,1)
+41060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+left$(vt$,2)+chr$(asc(mid$(vt$,3,1))+1)+mid$(vt$,4,1)
 41100 gosub 23000
 41900 goto 21180
 41998 :
 41999 :
 42000 rem generate 16 bit subtraction code
-42010 l$=sc$+"{ct b}"+chr$(56)+chr$(dec("ad"))+chr$(226)+v1$
+42010 l$=    "{ct b}"+chr$(56)+chr$(dec("ad"))+chr$(226)+v1$
 42020 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+v2$
 42030 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$
-42040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+v1$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
-42050 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+v2$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
-42060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+vt$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
+42040 l$=l$ +"{ct a}"         +chr$(dec("ad"))+chr$(226)+left$(v1$,2)+chr$(asc(mid$(v1$,3,1))+1)+mid$(v1$,4,1)
+42050 l$=l$ +"{ct a}"         +chr$(dec("ed"))+chr$(226)+left$(v2$,2)+chr$(asc(mid$(v2$,3,1))+1)+mid$(v2$,4,1)
+42060 l$=l$ +"{ct a}"         +chr$(dec("8d"))+chr$(226)+left$(vt$,2)+chr$(asc(mid$(vt$,3,1))+1)+mid$(vt$,4,1)
 42100 gosub 23000
 42900 goto 21180
 42998 :
 42999 :
-43000 rem l$=vt$+"="+v1$+"*"+v2$
-43010 l$=chr$(dec("ea")) :gosub 23000
+43000 rem vt$ = v1$ * v2$
+43010 l$="{ct a}"+chr$(dec("ea")) :gosub 23000
 43900 goto 21180
 43998 :
 43999 :
-44000 rem l$=vt$+"="+v1$+"/"+v2$
-44010 l$=chr$(dec("ea")) :gosub 23000
+44000 rem vt$ = v1$ / v2$
+44010 l$="{ct a}"+chr$(dec("ea")) :gosub 23000
 44900 goto 21180
 44998 :
 44999 :
-45000 rem l$=vt$+"="+v1$+"^"+v2$
-45010 l$=chr$(dec("ea")) :gosub 23000
+45000 rem vt$ = v1$ ^ v2$
+45010 l$="{ct a}"+chr$(dec("ea")) :gosub 23000
 45190 return
 45900 goto 21180
 45998 :
 45999 :
-46000 rem generate 16 bit assignment code
+46000 rem generate 16 bit assignment code:  v2$ = v1$
 46010 if left$(n1$,4)<>"var-" then en=17:l= 46000:goto 39000 :rem asn to const
-46020 l$=sc$+"{ct a}"+chr$(dec("ad"))+chr$(226)+v2$
+46020 l$=    "{ct a}"+chr$(dec("ad"))+chr$(226)+v2$
 46030 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+v1$
-46040 l$=l$ +"{ct a}"+chr$(dec("ad"))+chr$(226)+v2$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
-46050 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+v1$+chr$(asc(mid$(v$,3,1))+1)+chr$(0)
+46040 l$=l$ +"{ct a}"+chr$(dec("ad"))+chr$(226)+left$(v2$,2)+chr$(asc(mid$(v2$,3,1))+1)+mid$(v2$,4,1)
+46050 l$=l$ +"{ct a}"+chr$(dec("8d"))+chr$(226)+left$(v1$,2)+chr$(asc(mid$(v1$,3,1))+1)+mid$(v1$,4,1)
 46100 gosub 23000
 46900 goto 21180
 46998 :
@@ -629,9 +644,9 @@
 55040 if d=0 then print "low"; : else print "high";
 55050 print " byte first"
 55052 :
-55055 if s>=gl(g) then print "{ct o}{space*3}*** symbol is not defined ***":return                :rem count error
-55057 if ps=1  then  gs(sg)=gs(sg)+l    :rem update seg size during pass 1
-55060 if ps=2 and sg=zi-1 then begin    :rem do the insertion if at right seg
+55055 if ps=1  then  gs(sg)=gs(sg)+l    :rem update seg size during pass 1
+55057 if ps=2 and sg=zi-1 then begin    :rem do the insertion if at right seg
+55060 : if s>=gl(g) then print "{ct o}{space*3}*** symbol is not defined ***":return
 55062 : v=sl(g,s) + o                   :rem  (get val to ins)
 55065 : if d=1 then begin               :rem  high byte first
 55070 :   l=l-1 : d=256^int(log(v)/log(2)/8+.99)    :rem # bytes
